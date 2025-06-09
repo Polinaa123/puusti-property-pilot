@@ -174,7 +174,11 @@ const Index = () => {
         {/* Progress Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-[#49CA38]">puusti</h1>
+          <img 
+            src="/puusti-logo.jpeg" 
+            alt="puusti logo" 
+            className="h-12" 
+          />
             <Badge variant="secondary" className="text-[#49CA38]">
               Step {getCurrentStepIndex() + 1} of {steps.length}
             </Badge>

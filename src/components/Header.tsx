@@ -6,10 +6,11 @@ const Header: React.FC<{ onLogoClick?: () => void }> = ({ onLogoClick }) => {
   return (
     <header className="flex justify-between items-center p-5 w-full relative">
       <Link to="/" className="flex flex-col items-center no-underline">
-        <div className="w-12 h-9 border-2 border-[#49CA38] -mb-1" />
-        <span className="text-[#49CA38] text-lg font-bold font-['Kanit']">
-          puusti
-        </span>
+        <img 
+          src="/components/puusti-squaredlogo.jpeg" 
+          alt="puusti squared logo" 
+          className="h-12 w-auto" 
+        />
       </Link>
       
       <nav className="flex absolute left-1/2 transform -translate-x-1/2 gap-32">
