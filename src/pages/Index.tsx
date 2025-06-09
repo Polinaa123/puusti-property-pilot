@@ -27,6 +27,7 @@ const Index = () => {
     budget: [5000],
     selectedImprovements: [] as string[],
     photos: [] as File[],
+    listingLink: '',
     listingTitle: '',
     listingDescription: '',
     roomCount: '',
@@ -116,7 +117,8 @@ const Index = () => {
 
   const handleSubmit = async () => {
     try {
-      const pdfBlob = await generatePDF({ ...formData, propertyType: propertyType! });
+      const pdfDoc = await generatePDF({ ...formData, propertyType: propertyType! });
+      const pdfBlob = pdfDoc.output('blob');
       await sendFormSubmissionEmail(pdfBlob, { ...formData, propertyType: propertyType! });
       setCurrentStep('success');
     } catch (error) {
@@ -126,7 +128,8 @@ const Index = () => {
 
   const handleDownloadPDF = async () => {
     try {
-      const pdfBlob = await generatePDF({ ...formData, propertyType: propertyType! });
+      const pdfDoc = await generatePDF({ ...formData, propertyType: propertyType! });
+      const pdfBlob = pdfDoc.output('blob');
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -151,6 +154,7 @@ const Index = () => {
       budget: [5000],
       selectedImprovements: [],
       photos: [],
+      listingLink: '',
       listingTitle: '',
       listingDescription: '',
       roomCount: '',
@@ -415,7 +419,6 @@ const Index = () => {
                       <CardContent className="p-4 flex items-center space-x-3">
                         <Checkbox
                           checked={formData.selectedImprovements.includes(improvement)}
-                          readOnly
                           className="data-[state=checked]:bg-[#49CA38] data-[state=checked]:border-[#49CA38]"
                         />
                         <span className="font-medium text-gray-900">{improvement}</span>
