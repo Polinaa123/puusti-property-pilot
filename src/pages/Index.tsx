@@ -1,799 +1,635 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
-import { useToast } from "@/hooks/use-toast";
-import { generatePDF } from "../utils/pdfGenerator";
-import { sendFormSubmissionEmail } from "../utils/emailService";
-import SuccessPage from "../components/SuccessPage";
-import Header from "../components/Header";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRight } from "lucide-react";
+import { generatePDF } from '../utils/pdfGenerator';
+import { sendFormSubmissionEmail } from '../utils/emailService';
+import SuccessPage from '../components/SuccessPage';
 
 const Index = () => {
-  const { toast } = useToast();
-  const [showForm, setShowForm] = useState(false);
+  const [currentStep, setCurrentStep] = useState('property-type');
   const [propertyType, setPropertyType] = useState<'rental' | 'sale' | null>(null);
-  const [step, setStep] = useState(0); // 0: property type selection, 1-3: form steps, 4: summary, 5: success
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    location: '',
+    budget: [5000],
+    selectedImprovements: [] as string[],
+    photos: [] as File[],
+    listingTitle: '',
+    listingDescription: '',
+    roomCount: '',
+    propertySize: '',
+    yearBuilt: '',
+    propertyCondition: '',
+    targetMarket: '',
+    salePrice: ''
+  });
 
-  // Common fields
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [location, setLocation] = useState('');
-  const [listingLink, setListingLink] = useState('');
-  const [budget, setBudget] = useState([0]);
-  const [selectedImprovements, setSelectedImprovements] = useState<string[]>([]);
-  const [adPhotos, setAdPhotos] = useState<FileList | null>(null);
+  const steps = ['property-type', 'personal-info', 'property-details', 'improvements', 'budget', 'photos', 'summary'];
+  const stepTitles = {
+    'property-type': 'Property Type',
+    'personal-info': 'Personal Information',
+    'property-details': 'Property Details',
+    'improvements': 'Services Needed',
+    'budget': 'Budget',
+    'photos': 'Photos',
+    'summary': 'Review & Submit'
+  };
 
-  // Rental-specific fields
-  const [description, setDescription] = useState('');
-  const [adTitle, setAdTitle] = useState('');
-  const [interiorDesignNotes, setInteriorDesignNotes] = useState('');
-  const [seasons, setSeasons] = useState('');
-  const [audience, setAudience] = useState('');
-  const [customers, setCustomers] = useState('');
-  const [occupancyDays, setOccupancyDays] = useState([0]);
-  const [adDescription, setAdDescription] = useState('');
+  const getCurrentStepIndex = () => steps.indexOf(currentStep);
+  const getProgress = () => ((getCurrentStepIndex() + 1) / steps.length) * 100;
 
-  // Sale-specific fields
-  const [saleDescription, setSaleDescription] = useState('');
-  const [propertyAge, setPropertyAge] = useState('');
-  const [propertySize, setPropertySize] = useState('');
-  const [rooms, setRooms] = useState('');
-  const [targetBuyers, setTargetBuyers] = useState('');
-  const [sellingReason, setSellingReason] = useState('');
-  const [marketingGoals, setMarketingGoals] = useState('');
+  const rentalImprovements = [
+    'Professional Photography',
+    'Virtual Staging',
+    'Interior Design Consultation',
+    'Furniture Rental',
+    'Description and Title Optimization',
+    'Pricing Strategy',
+    'Guest Experience Enhancement'
+  ];
 
-  const improvementOptions = ['photos', 'description and title', 'interior design'];
+  const saleImprovements = [
+    'Home Staging',
+    'Professional Photography',
+    'Virtual Tours',
+    'Curb Appeal Enhancement',
+    'Interior Renovations',
+    'Market Analysis',
+    'Marketing Materials'
+  ];
 
-  const handleClick = () => {
-    setShowForm(true);
+  const improvements = propertyType === 'rental' ? rentalImprovements : saleImprovements;
+
+  const handleNext = () => {
+    const currentIndex = getCurrentStepIndex();
+    if (currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1]);
+    }
+  };
+
+  const handlePrev = () => {
+    const currentIndex = getCurrentStepIndex();
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1]);
+    }
   };
 
   const handlePropertyTypeSelect = (type: 'rental' | 'sale') => {
     setPropertyType(type);
-    setStep(1);
+    setFormData({ ...formData, selectedImprovements: [] });
+    setCurrentStep('personal-info');
   };
 
-  const handleNext = () => {
-    setStep((prev) => prev + 1);
+  const handleImprovementToggle = (improvement: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedImprovements: prev.selectedImprovements.includes(improvement)
+        ? prev.selectedImprovements.filter(item => item !== improvement)
+        : [...prev.selectedImprovements, improvement]
+    }));
   };
 
-  const handleBack = () => {
-    if (step === 1) {
-      setStep(0);
-      setPropertyType(null);
-    } else {
-      setStep((prev) => prev - 1);
-    }
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setFormData(prev => ({ ...prev, photos: [...prev.photos, ...files] }));
   };
 
-  const handleImprovementChange = (option: string, checked: boolean) => {
-    setSelectedImprovements((prev) => {
-      if (checked) {
-        return [...prev, option];
-      } else {
-        return prev.filter((item) => item !== option);
-      }
-    });
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStep(4);
-  };
-
-  const handleFinalSubmit = async () => {
+  const handleSubmit = async () => {
     try {
-      const formData = {
-        propertyType: propertyType!,
-        location,
-        listingLink,
-        selectedImprovements,
-        budget,
-        fullName,
-        email,
-        phoneNumber,
-        // Rental specific
-        ...(propertyType === 'rental' && {
-          description,
-          seasons,
-          audience,
-          customers,
-          occupancyDays,
-          adDescription,
-          adTitle,
-          interiorDesignNotes,
-        }),
-        // Sale specific
-        ...(propertyType === 'sale' && {
-          saleDescription,
-          propertyAge,
-          propertySize,
-          rooms,
-          targetBuyers,
-          sellingReason,
-          marketingGoals,
-        }),
-      };
-
-      // Generate PDF
-      const pdfDoc = generatePDF(formData);
-      const pdfBlob = pdfDoc.output('blob');
-
-      // Send email with PDF
-      await sendFormSubmissionEmail(pdfBlob, formData);
-
-      // Store PDF for download
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      (window as any).currentPdfUrl = pdfUrl;
-
-      toast({
-        title: "Success!",
-        description: "Your form has been submitted and sent to our team.",
-      });
-
-      setStep(5); // Show success page
+      const pdfBlob = await generatePDF({ ...formData, propertyType: propertyType! });
+      await sendFormSubmissionEmail(pdfBlob, { ...formData, propertyType: propertyType! });
+      setCurrentStep('success');
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast({
-        title: "Error",
-        description: "There was an error submitting your form. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
-  const handleDownloadPDF = () => {
-    const pdfUrl = (window as any).currentPdfUrl;
-    if (pdfUrl) {
+  const handleDownloadPDF = async () => {
+    try {
+      const pdfBlob = await generatePDF({ ...formData, propertyType: propertyType! });
+      const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = `puusti_submission_${fullName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      link.href = url;
+      link.download = `puusti_submission_${formData.fullName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
     }
   };
 
   const handleStartOver = () => {
-    // Reset all form state
-    setShowForm(false);
+    setCurrentStep('property-type');
     setPropertyType(null);
-    setStep(0);
-    setFullName('');
-    setEmail('');
-    setPhoneNumber('');
-    setLocation('');
-    setListingLink('');
-    setBudget([0]);
-    setSelectedImprovements([]);
-    setAdPhotos(null);
-    setDescription('');
-    setAdTitle('');
-    setInteriorDesignNotes('');
-    setSeasons('');
-    setAudience('');
-    setCustomers('');
-    setOccupancyDays([0]);
-    setAdDescription('');
-    setSaleDescription('');
-    setPropertyAge('');
-    setPropertySize('');
-    setRooms('');
-    setTargetBuyers('');
-    setSellingReason('');
-    setMarketingGoals('');
+    setFormData({
+      fullName: '',
+      email: '',
+      phoneNumber: '',
+      location: '',
+      budget: [5000],
+      selectedImprovements: [],
+      photos: [],
+      listingTitle: '',
+      listingDescription: '',
+      roomCount: '',
+      propertySize: '',
+      yearBuilt: '',
+      propertyCondition: '',
+      targetMarket: '',
+      salePrice: ''
+    });
   };
 
-  const renderImagePreviews = () => {
-    if (!adPhotos) return null;
+  if (currentStep === 'success') {
     return (
-      <div className="flex flex-wrap gap-4 mt-2">
-        {Array.from(adPhotos).map((file, idx) => {
-          const url = URL.createObjectURL(file);
-          return (
-            <img
-              key={idx}
-              src={url}
-              alt={`preview-${idx}`}
-              className="w-30 h-20 object-cover border-2 border-[#49CA38] rounded"
-            />
-          );
-        })}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <SuccessPage onDownloadPDF={handleDownloadPDF} onStartOver={handleStartOver} />
+        </div>
       </div>
     );
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex flex-col items-center justify-start min-h-[calc(100vh-90px)] pt-[90px] px-4">
-        <div 
-          className={`
-            relative border-4 border-[#49CA38] transition-all duration-300 cursor-pointer
-            ${showForm 
-              ? 'w-[90vw] max-w-4xl h-auto cursor-default' 
-              : 'w-[500px] h-[300px] hover:scale-105'
-            }
-          `}
-          onClick={!showForm ? handleClick : undefined}
-        >
-          {!showForm && (
-            <>
-              <span className="absolute bottom-1 right-6 text-[#49CA38] text-2xl italic font-['Kanit']">
-                ready to get puusted?
-              </span>
-              <div className="absolute -right-16 top-[30%] -translate-y-1/2 -rotate-90 text-[#49CA38] text-base italic font-['Kanit'] flex items-center">
-                ↑ click here
-              </div>
-              <div className="absolute -bottom-16 left-1 text-4xl font-black text-[#49CA38] font-['Kanit'] pointer-events-none">
-                puusti
-              </div>
-            </>
-          )}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Progress Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">Puusti Property Services</h1>
+            <Badge variant="secondary" className="text-sm">
+              Step {getCurrentStepIndex() + 1} of {steps.length}
+            </Badge>
+          </div>
+          <Progress value={getProgress()} className="mb-2" />
+          <p className="text-sm text-gray-600">{stepTitles[currentStep]}</p>
+        </div>
 
-          {showForm && (
-            <div className="flex flex-col items-center p-10 max-w-4xl mx-auto">
-              {step === 5 ? (
-                <SuccessPage 
-                  onDownloadPDF={handleDownloadPDF}
-                  onStartOver={handleStartOver}
-                />
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-8">
+            {currentStep === 'property-type' && (
+              <div className="text-center space-y-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-3">What type of property do you have?</h2>
+                  <p className="text-gray-600">Choose the option that best describes your property needs</p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                  <Card 
+                    className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
+                    onClick={() => handlePropertyTypeSelect('rental')}
+                  >
+                    <CardContent className="p-6 text-center">
+                      <div className="bg-[#49CA38]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
+                        <Building2 className="w-8 h-8 text-[#49CA38]" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Short-term Rental</h3>
+                      <p className="text-gray-600 text-sm">Optimize your Airbnb, VRBO, or other rental property</p>
+                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#49CA38] transition-colors" />
+                    </CardContent>
+                  </Card>
+
+                  <Card 
+                    className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
+                    onClick={() => handlePropertyTypeSelect('sale')}
+                  >
+                    <CardContent className="p-6 text-center">
+                      <div className="bg-[#49CA38]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
+                        <Home className="w-8 h-8 text-[#49CA38]" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Property for Sale</h3>
+                      <p className="text-gray-600 text-sm">Prepare your property for the real estate market</p>
+                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#49CA38] transition-colors" />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'personal-info' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Personal Information</h2>
+                  <p className="text-gray-600">Tell us a bit about yourself</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Input
+                      id="fullName"
+                      placeholder="Enter your full name"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Property Location *</Label>
+                    <Input
+                      id="location"
+                      placeholder="City, Country"
+                      value={formData.location}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'property-details' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Property Details</h2>
+                  <p className="text-gray-600">
+                    {propertyType === 'rental' ? 'Tell us about your rental property' : 'Tell us about your property for sale'}
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {propertyType === 'rental' ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="listingTitle">Current Listing Title</Label>
+                        <Input
+                          id="listingTitle"
+                          placeholder="Your current listing title"
+                          value={formData.listingTitle}
+                          onChange={(e) => setFormData({...formData, listingTitle: e.target.value})}
+                          className="h-12"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="roomCount">Number of Rooms</Label>
+                        <Select value={formData.roomCount} onValueChange={(value) => setFormData({...formData, roomCount: value})}>
+                          <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Select room count" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 Room</SelectItem>
+                            <SelectItem value="2">2 Rooms</SelectItem>
+                            <SelectItem value="3">3 Rooms</SelectItem>
+                            <SelectItem value="4">4 Rooms</SelectItem>
+                            <SelectItem value="5+">5+ Rooms</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="md:col-span-2 space-y-2">
+                        <Label htmlFor="listingDescription">Current Listing Description</Label>
+                        <Textarea
+                          id="listingDescription"
+                          placeholder="Your current listing description"
+                          value={formData.listingDescription}
+                          onChange={(e) => setFormData({...formData, listingDescription: e.target.value})}
+                          className="min-h-[120px]"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="propertySize">Property Size (sqm)</Label>
+                        <Input
+                          id="propertySize"
+                          placeholder="e.g., 120"
+                          value={formData.propertySize}
+                          onChange={(e) => setFormData({...formData, propertySize: e.target.value})}
+                          className="h-12"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="yearBuilt">Year Built</Label>
+                        <Input
+                          id="yearBuilt"
+                          placeholder="e.g., 2010"
+                          value={formData.yearBuilt}
+                          onChange={(e) => setFormData({...formData, yearBuilt: e.target.value})}
+                          className="h-12"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="propertyCondition">Property Condition</Label>
+                        <Select value={formData.propertyCondition} onValueChange={(value) => setFormData({...formData, propertyCondition: value})}>
+                          <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Select condition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excellent">Excellent</SelectItem>
+                            <SelectItem value="good">Good</SelectItem>
+                            <SelectItem value="fair">Fair</SelectItem>
+                            <SelectItem value="needs-renovation">Needs Renovation</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="salePrice">Expected Sale Price (€)</Label>
+                        <Input
+                          id="salePrice"
+                          placeholder="e.g., 300000"
+                          value={formData.salePrice}
+                          onChange={(e) => setFormData({...formData, salePrice: e.target.value})}
+                          className="h-12"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'improvements' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Services Needed</h2>
+                  <p className="text-gray-600">
+                    {propertyType === 'rental' 
+                      ? 'Select the services you need for your rental property' 
+                      : 'Select the services you need to prepare your property for sale'}
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {improvements.map((improvement) => (
+                    <Card 
+                      key={improvement}
+                      className={`cursor-pointer transition-all duration-200 border-2 ${
+                        formData.selectedImprovements.includes(improvement)
+                          ? 'border-[#49CA38] bg-[#49CA38]/5'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleImprovementToggle(improvement)}
+                    >
+                      <CardContent className="p-4 flex items-center space-x-3">
+                        <Checkbox
+                          checked={formData.selectedImprovements.includes(improvement)}
+                          readOnly
+                          className="data-[state=checked]:bg-[#49CA38] data-[state=checked]:border-[#49CA38]"
+                        />
+                        <span className="font-medium text-gray-900">{improvement}</span>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'budget' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Budget</h2>
+                  <p className="text-gray-600">What's your budget for this project?</p>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <div className="text-center mb-6">
+                      <div className="text-4xl font-bold text-[#49CA38] mb-2">€{formData.budget[0].toLocaleString()}</div>
+                      <p className="text-gray-600">Your selected budget</p>
+                    </div>
+                    <Slider
+                      value={formData.budget}
+                      onValueChange={(value) => setFormData({...formData, budget: value})}
+                      max={50000}
+                      min={1000}
+                      step={500}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-sm text-gray-500 mt-2">
+                      <span>€1,000</span>
+                      <span>€50,000+</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'photos' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Property Photos</h2>
+                  <p className="text-gray-600">Upload photos of your property (optional but recommended)</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#49CA38] transition-colors">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-4">Drag and drop photos here, or click to browse</p>
+                    <Input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <Label htmlFor="photo-upload">
+                      <Button type="button" variant="outline" className="cursor-pointer">
+                        Choose Photos
+                      </Button>
+                    </Label>
+                  </div>
+
+                  {formData.photos.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {formData.photos.map((photo, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={URL.createObjectURL(photo)}
+                            alt={`Property photo ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 p-0"
+                            onClick={() => removePhoto(index)}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'summary' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Review Your Submission</h2>
+                  <p className="text-gray-600">Please review all information before submitting</p>
+                </div>
+
+                <div className="grid gap-6">
+                  <Card className="bg-gray-50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Property Type</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge variant="secondary" className="bg-[#49CA38] text-white">
+                        {propertyType === 'rental' ? 'Short-term Rental' : 'Property for Sale'}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gray-50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Contact Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p><strong>Name:</strong> {formData.fullName}</p>
+                      <p><strong>Email:</strong> {formData.email}</p>
+                      <p><strong>Phone:</strong> {formData.phoneNumber}</p>
+                      <p><strong>Location:</strong> {formData.location}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gray-50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Selected Services</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.selectedImprovements.map((improvement) => (
+                          <Badge key={improvement} variant="outline">{improvement}</Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gray-50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Budget</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-[#49CA38]">€{formData.budget[0].toLocaleString()}</div>
+                    </CardContent>
+                  </Card>
+
+                  {formData.photos.length > 0 && (
+                    <Card className="bg-gray-50">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Uploaded Photos</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-4 gap-2">
+                          {formData.photos.slice(0, 4).map((photo, index) => (
+                            <img
+                              key={index}
+                              src={URL.createObjectURL(photo)}
+                              alt={`Property photo ${index + 1}`}
+                              className="w-full h-16 object-cover rounded border"
+                            />
+                          ))}
+                          {formData.photos.length > 4 && (
+                            <div className="w-full h-16 bg-gray-200 rounded border flex items-center justify-center text-sm text-gray-600">
+                              +{formData.photos.length - 4} more
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex justify-between items-center mt-8 pt-6 border-t">
+              {getCurrentStepIndex() > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrev}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Previous
+                </Button>
               ) : (
-                <>
-                  <h2 className="text-[#49CA38] mb-8 text-3xl font-['Kanit']">
-                    {step === 0 ? 'What type of property do you have?' : 'Submit your info'}
-                  </h2>
+                <div />
+              )}
 
-                  {step === 0 && (
-                    <div className="flex flex-col gap-6 w-full max-w-md">
-                      <Button
-                        onClick={() => handlePropertyTypeSelect('rental')}
-                        variant="outline"
-                        className="h-16 text-xl border-2 border-[#49CA38] text-[#49CA38] hover:bg-[#49CA38] hover:text-white font-['Kanit']"
-                      >
-                        Short-term rental (Airbnb, etc.)
-                      </Button>
-                      <Button
-                        onClick={() => handlePropertyTypeSelect('sale')}
-                        variant="outline"
-                        className="h-16 text-xl border-2 border-[#49CA38] text-[#49CA38] hover:bg-[#49CA38] hover:text-white font-['Kanit']"
-                      >
-                        Property for sale
-                      </Button>
-                    </div>
-                  )}
-
-                  {step > 0 && step < 4 && (
-                    <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
-                      {step === 1 && (
-                        <>
-                          {propertyType === 'rental' ? (
-                            <>
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Tell us about your property
-                                </Label>
-                                <Input
-                                  value={description}
-                                  onChange={(e) => setDescription(e.target.value)}
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit'] border-[#49CA38] focus:border-[#49CA38]"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Which seasons are the most important?
-                                </Label>
-                                <Input
-                                  value={seasons}
-                                  onChange={(e) => setSeasons(e.target.value)}
-                                  placeholder="e.g. summer, Christmas holidays"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Who is your target audience?
-                                </Label>
-                                <Input
-                                  value={audience}
-                                  onChange={(e) => setAudience(e.target.value)}
-                                  placeholder="e.g. couples, families, remote workers"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Are your customers Finns or others?
-                                </Label>
-                                <Input
-                                  value={customers}
-                                  onChange={(e) => setCustomers(e.target.value)}
-                                  placeholder="e.g. 70% foreigners, 30% locals"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-4 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Occupation days per year: {occupancyDays[0]}
-                                </Label>
-                                <div className="w-full max-w-[700px] mx-auto px-4">
-                                  <Slider
-                                    value={occupancyDays}
-                                    onValueChange={setOccupancyDays}
-                                    max={365}
-                                    step={1}
-                                    className="w-full"
-                                  />
-                                  <div className="flex justify-between text-sm text-[#49CA38] font-['Kanit'] mt-2">
-                                    <span>0</span>
-                                    <span>90</span>
-                                    <span>180</span>
-                                    <span>270</span>
-                                    <span>365</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Tell us about your property for sale
-                                </Label>
-                                <Textarea
-                                  value={saleDescription}
-                                  onChange={(e) => setSaleDescription(e.target.value)}
-                                  placeholder="Describe your property: type, condition, special features..."
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit'] min-h-[100px]"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Property age
-                                </Label>
-                                <Input
-                                  value={propertyAge}
-                                  onChange={(e) => setPropertyAge(e.target.value)}
-                                  placeholder="e.g. Built in 1995, renovated 2020"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Property size and rooms
-                                </Label>
-                                <Input
-                                  value={rooms}
-                                  onChange={(e) => setRooms(e.target.value)}
-                                  placeholder="e.g. 85m², 3 rooms + kitchen"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Target buyers
-                                </Label>
-                                <Input
-                                  value={targetBuyers}
-                                  onChange={(e) => setTargetBuyers(e.target.value)}
-                                  placeholder="e.g. young families, investors, first-time buyers"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Reason for selling
-                                </Label>
-                                <Input
-                                  value={sellingReason}
-                                  onChange={(e) => setSellingReason(e.target.value)}
-                                  placeholder="e.g. moving abroad, downsizing, investment"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Marketing goals
-                                </Label>
-                                <Input
-                                  value={marketingGoals}
-                                  onChange={(e) => setMarketingGoals(e.target.value)}
-                                  placeholder="e.g. quick sale, best price, attract specific buyers"
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              Location of your listing
-                            </Label>
-                            <Input
-                              value={location}
-                              onChange={(e) => setLocation(e.target.value)}
-                              placeholder="e.g. Helsinki, Finland"
-                              required
-                              className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                            />
-                          </div>
-
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              Listing link (if any)
-                            </Label>
-                            <Input
-                              type="url"
-                              value={listingLink}
-                              onChange={(e) => setListingLink(e.target.value)}
-                              placeholder="https://www.example.com/your-listing/..."
-                              className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                            />
-                          </div>
-
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-4 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              What do you want to improve?
-                            </Label>
-                            <div className="flex flex-wrap gap-5 justify-center">
-                              {improvementOptions.map((option) => (
-                                <div key={option} className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={option}
-                                    checked={selectedImprovements.includes(option)}
-                                    onCheckedChange={(checked) => handleImprovementChange(option, checked as boolean)}
-                                    className="border-2 border-[#49CA38] data-[state=checked]:bg-[#49CA38]"
-                                  />
-                                  <Label htmlFor={option} className="text-lg font-['Kanit'] text-[#49CA38] cursor-pointer">
-                                    {option}
-                                  </Label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-4 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              Your budget (EUR): {budget[0]}€
-                            </Label>
-                            <div className="w-full max-w-[700px] mx-auto px-4">
-                              <Slider
-                                value={budget}
-                                onValueChange={setBudget}
-                                max={1000}
-                                step={1}
-                                className="w-full"
-                              />
-                              <div className="flex justify-between text-sm text-[#49CA38] font-['Kanit'] mt-2">
-                                <span>0€</span>
-                                <span>250€</span>
-                                <span>500€</span>
-                                <span>750€</span>
-                                <span>1000€</span>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-
-                      {step === 2 && (
-                        <>
-                          {selectedImprovements.includes('photos') && (
-                            <div className="flex flex-col w-full">
-                              <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                Add photos from your listing
-                              </Label>
-                              <Input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) => setAdPhotos(e.target.files)}
-                                className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                              />
-                              {renderImagePreviews()}
-                            </div>
-                          )}
-
-                          {selectedImprovements.includes('description and title') && (
-                            <>
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Description from the listing
-                                </Label>
-                                <Textarea
-                                  rows={4}
-                                  value={adDescription}
-                                  onChange={(e) => setAdDescription(e.target.value)}
-                                  placeholder="Paste your current ad description here..."
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-
-                              <div className="flex flex-col w-full">
-                                <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                  Title from the listing
-                                </Label>
-                                <Input
-                                  value={adTitle}
-                                  onChange={(e) => setAdTitle(e.target.value)}
-                                  placeholder="Enter your ad title here..."
-                                  required
-                                  className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          {selectedImprovements.includes('interior design') && (
-                            <div className="flex flex-col w-full">
-                              <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                                Interior design notes
-                              </Label>
-                              <Textarea
-                                rows={3}
-                                value={interiorDesignNotes}
-                                onChange={(e) => setInteriorDesignNotes(e.target.value)}
-                                placeholder="Leave any notes related to interior design here..."
-                                className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                              />
-                            </div>
-                          )}
-
-                          {selectedImprovements.length === 0 && (
-                            <div className="text-center text-[#49CA38] font-['Kanit'] text-lg">
-                              No improvements selected. You can skip this step.
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {step === 3 && (
-                        <>
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              Your full name, please
-                            </Label>
-                            <Input
-                              value={fullName}
-                              onChange={(e) => setFullName(e.target.value)}
-                              required
-                              className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                            />
-                          </div>
-
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              Email where we will contact you
-                            </Label>
-                            <Input
-                              type="email"
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              required
-                              className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                            />
-                          </div>
-
-                          <div className="flex flex-col w-full">
-                            <Label className="mb-2 text-xl font-['Kanit'] text-[#49CA38] text-center">
-                              Phone number
-                            </Label>
-                            <Input
-                              type="tel"
-                              value={phoneNumber}
-                              onChange={(e) => setPhoneNumber(e.target.value)}
-                              placeholder="+358 ..."
-                              required
-                              className="w-full max-w-[700px] mx-auto font-['Kanit']"
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      <div className="flex justify-between w-full max-w-[700px] mx-auto mt-5">
-                        {step > 0 && (
-                          <Button
-                            type="button"
-                            onClick={handleBack}
-                            className="bg-[#49CA38] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-2"
-                          >
-                            Back
-                          </Button>
-                        )}
-
-                        {step < 3 && (
-                          <Button
-                            type="button"
-                            onClick={handleNext}
-                            className="bg-[#49CA38] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-2 ml-auto"
-                          >
-                            Next
-                          </Button>
-                        )}
-
-                        {step === 3 && (
-                          <Button
-                            type="submit"
-                            className="bg-[#49CA38] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-2 ml-auto"
-                          >
-                            Submit
-                          </Button>
-                        )}
-                      </div>
-                    </form>
-                  )}
-
-                  {step === 4 && (
-                    <div className="w-full max-w-4xl bg-gray-50 p-8 rounded-lg">
-                      <h3 className="text-3xl font-['Kanit'] text-[#49CA38] mb-6 text-center">
-                        Review your information
-                      </h3>
-
-                      <div className="space-y-4">
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Property type:</span> {propertyType === 'rental' ? 'Short-term rental' : 'Property for sale'}
-                        </div>
-
-                        {propertyType === 'rental' ? (
-                          <>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Property description:</span> {description}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Seasons:</span> {seasons}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Target audience:</span> {audience}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Customers:</span> {customers}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Occupation days per year:</span> {occupancyDays[0]}
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Property description:</span> {saleDescription}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Property age:</span> {propertyAge}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Size and rooms:</span> {rooms}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Target buyers:</span> {targetBuyers}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Selling reason:</span> {sellingReason}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Marketing goals:</span> {marketingGoals}
-                            </div>
-                          </>
-                        )}
-
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Location:</span> {location}
-                        </div>
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Listing link:</span>{' '}
-                          {listingLink ? (
-                            <a href={listingLink} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                              {listingLink}
-                            </a>
-                          ) : (
-                            '—'
-                          )}
-                        </div>
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Improvements:</span>{' '}
-                          {selectedImprovements.length > 0 ? selectedImprovements.join(', ') : '—'}
-                        </div>
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Budget (EUR):</span> {budget[0]}€
-                        </div>
-
-                        {selectedImprovements.includes('photos') && (
-                          <div className="text-lg font-['Kanit'] text-gray-700">
-                            <span className="font-semibold text-[#49CA38]">Photos uploaded:</span>
-                            {adPhotos && adPhotos.length > 0 ? (
-                              <div className="flex flex-wrap gap-4 mt-3">
-                                {Array.from(adPhotos).map((file, idx) => {
-                                  const url = URL.createObjectURL(file);
-                                  return (
-                                    <img
-                                      key={idx}
-                                      src={url}
-                                      alt={`preview-${idx}`}
-                                      className="w-32 h-24 object-cover border-2 border-[#49CA38] rounded"
-                                    />
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              ' No photos uploaded'
-                            )}
-                          </div>
-                        )}
-
-                        {selectedImprovements.includes('description and title') && (
-                          <>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Ad description:</span> {adDescription}
-                            </div>
-                            <div className="text-lg font-['Kanit'] text-gray-700">
-                              <span className="font-semibold text-[#49CA38]">Ad title:</span> {adTitle}
-                            </div>
-                          </>
-                        )}
-
-                        {selectedImprovements.includes('interior design') && (
-                          <div className="text-lg font-['Kanit'] text-gray-700">
-                            <span className="font-semibold text-[#49CA38]">Interior design notes:</span> {interiorDesignNotes}
-                          </div>
-                        )}
-
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Full name:</span> {fullName}
-                        </div>
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Email:</span> {email}
-                        </div>
-                        <div className="text-lg font-['Kanit'] text-gray-700">
-                          <span className="font-semibold text-[#49CA38]">Phone number:</span> {phoneNumber}
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between w-full mt-8">
-                        <Button
-                          type="button"
-                          onClick={handleBack}
-                          className="bg-[#49CA38] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-2"
-                        >
-                          Back
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={handleFinalSubmit}
-                          className="bg-[#49CA38] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-2"
-                        >
-                          Confirm & Send
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
+              {currentStep === 'summary' ? (
+                <Button
+                  onClick={handleSubmit}
+                  className="bg-[#49CA38] hover:bg-[#3ab42f] text-white flex items-center gap-2"
+                  disabled={!formData.fullName || !formData.email || !formData.phoneNumber || !formData.location}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Confirm & Send
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNext}
+                  className="bg-[#49CA38] hover:bg-[#3ab42f] text-white flex items-center gap-2"
+                  disabled={
+                    (currentStep === 'personal-info' && (!formData.fullName || !formData.email || !formData.phoneNumber || !formData.location)) ||
+                    (currentStep === 'improvements' && formData.selectedImprovements.length === 0)
+                  }
+                >
+                  Next
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
               )}
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
