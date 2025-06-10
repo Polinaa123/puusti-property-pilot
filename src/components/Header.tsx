@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import puustibiglogo from '../components/puusti-biglogo.jpeg';
 
 const Header: React.FC<{ onLogoClick?: () => void }> = ({ onLogoClick }) => {
   return (
     <header className="flex justify-between items-center p-5 w-full relative">
       <Link to="/" className="flex flex-col items-center no-underline">
         <img 
-          src="/components/puusti-squaredlogo.jpeg" 
+          src= {puustibiglogo}
           alt="puusti squared logo" 
           className="h-12 w-auto" 
         />

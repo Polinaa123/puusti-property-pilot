@@ -174,12 +174,13 @@ const Index = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Progress Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-          <img 
-            src={puustilogo}
-            alt="puusti logo" 
-            className="h-12" 
-          />
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src={puustilogo}
+              alt="puusti logo" 
+              className="h-12" 
+            />
+          <div className="flex items-center justify-between"></div>
             <Badge variant="secondary" className="text-[#32ad41]">
               Step {getCurrentStepIndex() + 1} of {steps.length}
             </Badge>
@@ -203,7 +204,7 @@ const Index = () => {
                     onClick={() => handlePropertyTypeSelect('rental')}
                   >
                     <CardContent className="p-6 text-center">
-                      <div className="bg-[#49CA38]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
+                      <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
                         <Building2 className="w-8 h-8 text-[#32ad41]" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-700 mb-2">short-term rental</h3>
