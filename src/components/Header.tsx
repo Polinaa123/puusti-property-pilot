@@ -16,25 +16,25 @@ const Header: React.FC<{ onLogoClick?: () => void }> = ({ onLogoClick }) => {
       <nav className="flex absolute left-1/2 transform -translate-x-1/2 gap-32">
         <Link 
           to="/about" 
-          className="text-[#49CA38] no-underline text-lg font-['Kanit'] hover:underline"
+          className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline"
         >
           about
         </Link>
         <Link 
           to="/something" 
-          className="text-[#49CA38] no-underline text-lg font-['Kanit'] hover:underline"
+          className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline"
         >
           something
         </Link>
         <Link 
           to="/for-investors" 
-          className="text-[#49CA38] no-underline text-lg font-['Kanit'] hover:underline"
+          className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline"
         >
           for investors
         </Link>
         <Link 
           to="/contact-us" 
-          className="text-[#49CA38] no-underline text-lg font-['Kanit'] hover:underline"
+          className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline"
         >
           contact us
         </Link>

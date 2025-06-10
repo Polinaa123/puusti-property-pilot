@@ -15,6 +15,7 @@ import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRig
 import { generatePDF } from '../utils/pdfGenerator';
 import { sendFormSubmissionEmail } from '../utils/emailService';
 import SuccessPage from '../components/SuccessPage';
+import puustilogo from '../pages/PUUSTILOGO.png';
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState('property-type');
@@ -175,16 +176,16 @@ const Index = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
           <img 
-            src="/PUUSTIlogo.png" 
+            src={puustilogo}
             alt="puusti logo" 
             className="h-12" 
           />
-            <Badge variant="secondary" className="text-[#49CA38]">
+            <Badge variant="secondary" className="text-[#32ad41]">
               Step {getCurrentStepIndex() + 1} of {steps.length}
             </Badge>
           </div>
           <Progress value={getProgress()} className="mb-2" />
-          <p className="text-sm text-[#49CA38]">{stepTitles[currentStep]}</p>
+          <p className="text-sm text-[#32ad41]">{stepTitles[currentStep]}</p>
         </div>
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -203,11 +204,11 @@ const Index = () => {
                   >
                     <CardContent className="p-6 text-center">
                       <div className="bg-[#49CA38]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
-                        <Building2 className="w-8 h-8 text-[#49CA38]" />
+                        <Building2 className="w-8 h-8 text-[#32ad41]" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-700 mb-2">short-term rental</h3>
                       <p className="text-gray-600 text-sm">optimize your rental property</p>
-                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#49CA38] transition-colors" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#32ad41] transition-colors" />
                     </CardContent>
                   </Card>
 
@@ -216,12 +217,12 @@ const Index = () => {
                     onClick={() => handlePropertyTypeSelect('sale')}
                   >
                     <CardContent className="p-6 text-center">
-                      <div className="bg-[#49CA38]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
-                        <Home className="w-8 h-8 text-[#49CA38]" />
+                      <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
+                        <Home className="w-8 h-8 text-[#32ad41]" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-700 mb-2">property for sale</h3>
                       <p className="text-gray-600 text-sm">prepare your property for the real estate market</p>
-                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#49CA38] transition-colors" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#32ad41] transition-colors" />
                     </CardContent>
                   </Card>
                 </div>
@@ -408,7 +409,7 @@ const Index = () => {
                       key={improvement}
                       className={`cursor-pointer transition-all duration-200 border-2 ${
                         formData.selectedImprovements.includes(improvement)
-                          ? 'border-[#49CA38] bg-[#49CA38]/5'
+                          ? 'border-[#32ad41] bg-[#32ad41]/5'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                       onClick={() => handleImprovementToggle(improvement)}
@@ -416,7 +417,7 @@ const Index = () => {
                       <CardContent className="p-4 flex items-center space-x-3">
                         <Checkbox
                           checked={formData.selectedImprovements.includes(improvement)}
-                          className="data-[state=checked]:bg-[#49CA38] data-[state=checked]:border-[#49CA38]"
+                          className="data-[state=checked]:bg-[#49CA38] data-[state=checked]:border-[#32ad41]"
                         />
                         <span className="font-medium text-gray-900">{improvement}</span>
                       </CardContent>
@@ -436,7 +437,7 @@ const Index = () => {
                 <div className="space-y-8">
                   <div className="bg-gray-50 rounded-xl p-6">
                     <div className="text-center mb-6">
-                      <div className="text-4xl font-bold text-[#49CA38] mb-2">€{formData.budget[0].toLocaleString()}</div>
+                      <div className="text-4xl font-bold text-[#32ad41] mb-2">€{formData.budget[0].toLocaleString()}</div>
                       <p className="text-gray-600">your selected budget</p>
                     </div>
                     <Slider
@@ -521,7 +522,7 @@ const Index = () => {
                       <CardTitle className="text-lg text-gray-700">property type</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <Badge variant="secondary" className="bg-[#49CA38] text-white">
+                      <Badge variant="secondary" className="bg-[#32ad41] text-white">
                         {propertyType === 'rental' ? 'short-term rental' : 'property for sale'}
                       </Badge>
                     </CardContent>
@@ -557,7 +558,7 @@ const Index = () => {
                       <CardTitle className="text-lg text-gray-700">budget</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-[#49CA38]">€{formData.budget[0].toLocaleString()}</div>
+                      <div className="text-2xl font-bold text-[#32ad41]">€{formData.budget[0].toLocaleString()}</div>
                     </CardContent>
                   </Card>
 
@@ -608,7 +609,7 @@ const Index = () => {
               {currentStep === 'summary' ? (
                 <Button
                   onClick={handleSubmit}
-                  className="bg-[#49CA38] hover:bg-[#3ab42f] text-white flex items-center gap-2"
+                  className="bg-[#32ad41] hover:bg-[#3ab42f] text-white flex items-center gap-2"
                   disabled={!formData.fullName || !formData.email || !formData.phoneNumber || !formData.location}
                 >
                   <CheckCircle className="w-4 h-4" />
@@ -617,7 +618,7 @@ const Index = () => {
               ) : (
                 <Button
                   onClick={handleNext}
-                  className="bg-[#49CA38] hover:bg-[#3ab42f] text-white flex items-center gap-2"
+                  className="bg-[#32ad41] hover:bg-[#3ab42f] text-white flex items-center gap-2"
                   disabled={
                     (currentStep === 'personal-info' && (!formData.fullName || !formData.email || !formData.phoneNumber || !formData.location)) ||
                     (currentStep === 'improvements' && formData.selectedImprovements.length === 0)
