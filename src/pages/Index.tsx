@@ -180,15 +180,15 @@ const Index = () => {
               alt="puusti logo" 
               className="h-12" 
             />
-          <div className="flex items-center justify-between"></div>
+            </div>
+          <Progress value={getProgress()} className="mb-4"/>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-[#32ad41]">{stepTitles[currentStep]}</p>
             <Badge variant="secondary" className="text-[#32ad41]">
               Step {getCurrentStepIndex() + 1} of {steps.length}
             </Badge>
           </div>
-          <Progress value={getProgress()} className="mb-2" />
-          <p className="text-sm text-[#32ad41]">{stepTitles[currentStep]}</p>
         </div>
-
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-8">
             {currentStep === 'property-type' && (
