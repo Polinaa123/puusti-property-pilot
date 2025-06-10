@@ -175,7 +175,7 @@ const Index = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
           <img 
-            src="/puusti-logo.jpeg" 
+            src="/PUUSTIlogo.png" 
             alt="puusti logo" 
             className="h-12" 
           />
