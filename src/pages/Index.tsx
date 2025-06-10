@@ -317,7 +317,7 @@ const Index = () => {
                             <SelectValue placeholder="Select room count" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1">studio</SelectItem>
+                            <SelectItem value="0">studio</SelectItem>
                             <SelectItem value="1">1 room</SelectItem>
                             <SelectItem value="2">2 rooms</SelectItem>
                             <SelectItem value="3">3 rooms</SelectItem>
@@ -601,7 +601,7 @@ const Index = () => {
                   className="flex items-center gap-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Previous
+                  previous
                 </Button>
               ) : (
                 <div />
