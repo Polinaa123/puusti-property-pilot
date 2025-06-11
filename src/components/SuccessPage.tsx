@@ -12,10 +12,10 @@ const SuccessPage: React.FC<SuccessPageProps> = ({ onDownloadPDF, onStartOver })
   return (
     <div className="w-full max-w-2xl mx-auto text-center p-8">
       <div className="flex justify-center mb-6">
-        <CheckCircle className="w-16 h-16 text-[#49CA38]" />
+        <CheckCircle className="w-16 h-16 text-[#32ad41]" />
       </div>
       
-      <h2 className="text-3xl font-['Kanit'] text-[#49CA38] mb-4">
+      <h2 className="text-3xl font-['Kanit'] text-[#32ad41] mb-4">
         Form Successfully Submitted!
       </h2>
       
@@ -23,10 +23,10 @@ const SuccessPage: React.FC<SuccessPageProps> = ({ onDownloadPDF, onStartOver })
         Thank you for choosing Puusti! Your form has been sent to our team and we'll get back to you soon.
       </p>
       
-      <div className="bg-green-50 border border-[#49CA38] rounded-lg p-6 mb-8">
+      <div className="bg-green-50 border border-[#32ad41] rounded-lg p-6 mb-8">
         <div className="flex items-center justify-center mb-4">
-          <Mail className="w-6 h-6 text-[#49CA38] mr-2" />
-          <span className="font-['Kanit'] text-[#49CA38] font-semibold">
+          <Mail className="w-6 h-6 text-[#32ad41] mr-2" />
+          <span className="font-['Kanit'] text-[#32ad41] font-semibold">
             Email Notification Sent
           </span>
         </div>
@@ -38,7 +38,7 @@ const SuccessPage: React.FC<SuccessPageProps> = ({ onDownloadPDF, onStartOver })
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Button
           onClick={onDownloadPDF}
-          className="bg-[#49CA38] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-3 flex items-center gap-2"
+          className="bg-[#32ad41] hover:bg-[#3ab42f] text-white font-['Kanit'] text-lg px-6 py-3 flex items-center gap-2"
         >
           <Download className="w-5 h-5" />
           Download PDF Copy
@@ -47,7 +47,7 @@ const SuccessPage: React.FC<SuccessPageProps> = ({ onDownloadPDF, onStartOver })
         <Button
           onClick={onStartOver}
           variant="outline"
-          className="border-[#49CA38] text-[#49CA38] hover:bg-[#49CA38] hover:text-white font-['Kanit'] text-lg px-6 py-3"
+          className="border-[#32ad41] text-[#32ad41] hover:bg-[#32ad41] hover:text-white font-['Kanit'] text-lg px-6 py-3"
         >
           Submit Another Form
         </Button>

@@ -1,5 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
@@ -38,6 +39,8 @@ const Index = () => {
     targetMarket: '',
     salePrice: ''
   });
+
+  const printRef = useRef<HTMLDivElement>(null);
 
   const steps = ['property-type', 'personal-info', 'property-details', 'improvements', 'budget', 'photos', 'summary'];
   const stepTitles = {
@@ -98,6 +101,7 @@ const Index = () => {
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    console.log('Uploaded files:', files);
     setFormData(prev => ({ ...prev, photos: [...prev.photos, ...files] }));
   };
 
@@ -460,55 +464,68 @@ const Index = () => {
 
             {currentStep === 'photos' && (
               <div className="space-y-6">
-                <div>
+                <div className="text-center">
                   <h2 className="text-2xl font-bold text-gray-700 mb-2">property photos</h2>
-                  <p className="text-gray-600">upload photos of your property (optional but recommended)</p>
+                  <p className="text-gray-600">
+                    upload photos of your property (optional but recommended)
+                  </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#49CA38] transition-colors">
+                {/* wrap in a flex container to center the box */}
+                <div className="flex justify-center">
+                  <label
+                    htmlFor="photo-upload"
+                    className="
+                      relative 
+                      border-2 border-dashed border-gray-300 
+                      rounded-xl p-12 
+                      text-center 
+                      hover:border-[#32ad41] transition-colors 
+                      cursor-pointer 
+                      w-full max-w-xs   /* shrink the box to a more “square” look */
+                    "
+                  >
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">drag and drop photos here, or click to browse</p>
-                    <Input
+                    <p className="text-gray-600 mb-4">
+                      drag and drop photos here, or click to browse
+                    </p>
+                    <input
                       type="file"
                       multiple
                       accept="image/*"
                       onChange={handlePhotoUpload}
-                      className="hidden"
                       id="photo-upload"
+                      className="hidden"
                     />
-                    <Label htmlFor="photo-upload">
-                      <Button type="button" variant="outline" className="cursor-pointer">
-                        choose photos
-                      </Button>
-                    </Label>
-                  </div>
-
-                  {formData.photos.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {formData.photos.map((photo, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={URL.createObjectURL(photo)}
-                            alt={`property photo ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 p-0"
-                            onClick={() => removePhoto(index)}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  </label>
                 </div>
-              </div>
-            )}
+
+    {/* only show previews if there are any */}
+    {formData.photos.length > 0 && (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {formData.photos.map((photo, i) => (
+          <div key={i} className="relative group">
+            <img
+              src={URL.createObjectURL(photo)}
+              alt={`photo-${i}`}
+              className="w-full h-24 object-cover rounded-lg border"
+            />
+            <Button
+              variant="destructive"
+              size="sm"
+              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 p-0"
+              onClick={() => removePhoto(i)}
+            >
+              ×
+            </Button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
+            {/* Summary Step */}
 
             {currentStep === 'summary' && (
               <div className="space-y-6">
