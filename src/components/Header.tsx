@@ -43,5 +43,3 @@ const Header: React.FC<{ onLogoClick?: () => void }> = ({ onLogoClick }) => {
     </header>
   );
 };
-
-export default Header;

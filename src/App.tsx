@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import FreelancerRegistrationForm from './components/FreelancerRegistrationForm';
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,12 @@ const App = () => (
                 </div>
               }
             />
+            <Route 
+              path="/register" 
+              element={<FreelancerRegistrationForm />
+              } 
+            />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
