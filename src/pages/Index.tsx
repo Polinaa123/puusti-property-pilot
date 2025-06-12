@@ -14,12 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRight } from "lucide-react";
 import { generatePDF } from '../utils/pdfGenerator';
-import { sendFormSubmissionEmail } from '../utils/emailService';
 import SuccessPage from '../components/SuccessPage';
 import puustilogo from '../pages/PUUSTILOGO.png';
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState('property-type');
+  const [currentStep, setCurrentStep] = useState<keyof typeof stepTitles | 'success'>('property-type');
   const [propertyType, setPropertyType] = useState<'rental' | 'sale' | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -73,14 +72,14 @@ const Index = () => {
   const handleNext = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      setCurrentStep(steps[currentIndex + 1] as keyof typeof stepTitles);
     }
   };
 
   const handlePrev = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1]);
+      setCurrentStep(steps[currentIndex - 1] as keyof typeof stepTitles);
     }
   };
 
@@ -114,12 +113,16 @@ const Index = () => {
 
   const handleSubmit = async () => {
     try {
-      const pdfDoc = await generatePDF({ ...formData, propertyType: propertyType! });
-      const pdfBlob = pdfDoc.output('blob');
-      await sendFormSubmissionEmail(pdfBlob, { ...formData, propertyType: propertyType! });
+      const res = await fetch('/api/sendSubmission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, propertyType }),
+      });
+      if (!res.ok) throw new Error(await res.text());
       setCurrentStep('success');
-    } catch (error) {
-      console.error('error submitting form:', error);
+    } catch (err) {
+      console.error('error submitting form:', err);
+      alert('Failed to send email; check the console for details.');
     }
   };
 

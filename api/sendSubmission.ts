@@ -2,6 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
 import { generatePDF, FormData } from '../src/utils/pdfGenerator';
 
+console.log('▶️ ENV:', {
+  GMAIL_USER: process.env.GMAIL_USER,
+  GMAIL_PASS: process.env.GMAIL_PASS?.slice(0,4) + '…'
+});
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).end('Only POST allowed');

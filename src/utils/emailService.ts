@@ -1,6 +1,8 @@
 
 import emailjs from 'emailjs-com';
 
+emailjs.init(import.meta.env.VITE_EMAILJS_USER_ID);
+
 export const sendFormSubmissionEmail = async (pdfBlob: Blob, formData: any) => {
   try {
     // Convert blob to base64
@@ -25,19 +27,16 @@ export const sendFormSubmissionEmail = async (pdfBlob: Blob, formData: any) => {
         };
         
         try {
-          // You'll need to set up EmailJS service, template, and public key
-          // For now, we'll just console.log the attempt
           console.log('Email would be sent with:', templateParams);
-          
-          // Uncomment and configure when EmailJS is set up:
-          /*
+
+          const publicKey = import.meta.env.VITE_EMAILJS_USER_ID;
+
           const result = await emailjs.send(
-            'YOUR_SERVICE_ID',
-            'YOUR_TEMPLATE_ID',
+            import.meta.env.VITE_EMAILJS_SERVICE_ID,
+            import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
             templateParams,
-            'YOUR_PUBLIC_KEY'
+            publicKey
           );
-          */
           
           resolve('Email sent successfully (simulated)');
         } catch (error) {
