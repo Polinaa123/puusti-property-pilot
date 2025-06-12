@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import FreelancerRegistrationForm from './components/FreelancerRegistrationForm';
+import FreelancerRegistrationForm from './components/FreelanceRegistrationForm';
 
 const queryClient = new QueryClient();
 
