@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
 import { FileImage, ArrowUp, ArrowDown } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../hooks/use-toast';
 
-// Define form data interface
 interface FreelancerFormData {
   fullName: string;
   email: string;
@@ -18,7 +17,6 @@ interface FreelancerFormData {
   location: string;
   servicesOffered: string[];
   hourlyRate: number;
-  availability: string[];
   experienceLevel: 'junior' | 'mid-level' | 'senior';
   portfolioUrls: { url: string }[];
   password: string;
@@ -26,7 +24,6 @@ interface FreelancerFormData {
   termsAccepted: boolean;
 }
 
-// File preview interface
 interface FilePreview {
   file: File;
   preview: string;
@@ -38,27 +35,10 @@ export default function FreelancerRegistrationForm(){
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FilePreview[]>([]);
 
-  // Service options
   const serviceOptions = [
     'Photography',
     'Copywriting',
     'Interior Design',
-    'Web Development',
-    'Graphic Design',
-    'Digital Marketing',
-    'Video Editing',
-    'Translation',
-  ];
-
-  // Days of the week for availability
-  const daysOfWeek = [
-    'Monday',
-    'Tuesday', 
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
   ];
 
   // Initialize React Hook Form
@@ -74,21 +54,17 @@ export default function FreelancerRegistrationForm(){
     defaultValues: {
       portfolioUrls: [{ url: '' }],
       servicesOffered: [],
-      availability: [],
       termsAccepted: false,
     },
   });
 
-  // Portfolio URLs field array
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'portfolioUrls',
   });
 
-  // Watch password for confirmation validation
   const password = watch('password');
 
-  // Handle file upload with preview generation
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     
@@ -106,12 +82,10 @@ export default function FreelancerRegistrationForm(){
     });
   };
 
-  // Remove uploaded file
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Handle checkbox group changes
   const handleServiceChange = (service: string, checked: boolean) => {
     const currentServices = getValues('servicesOffered');
     if (checked) {
@@ -121,24 +95,12 @@ export default function FreelancerRegistrationForm(){
     }
   };
 
-  const handleAvailabilityChange = (day: string, checked: boolean) => {
-    const currentAvailability = getValues('availability');
-    if (checked) {
-      setValue('availability', [...currentAvailability, day]);
-    } else {
-      setValue('availability', currentAvailability.filter(d => d !== day));
-    }
-  };
-
-  // Form submission handler
   const onSubmit = async (data: FreelancerFormData) => {
     setIsSubmitting(true);
 
     try {
-      // Create FormData to include files
       const formData = new FormData();
       
-      // Append form data
       Object.entries(data).forEach(([key, value]) => {
         if (Array.isArray(value)) {
           formData.append(key, JSON.stringify(value));
@@ -147,12 +109,10 @@ export default function FreelancerRegistrationForm(){
         }
       });
 
-      // Append files
       uploadedFiles.forEach((filePreview, index) => {
         formData.append(`sampleFiles_${index}`, filePreview.file);
       });
 
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       console.log('Form Data:', data);
@@ -286,9 +246,9 @@ export default function FreelancerRegistrationForm(){
 
                 {/* Hourly Rate */}
                 <div className="space-y-2">
-                  <Label htmlFor="hourlyRate">Hourly Rate (USD) *</Label>
+                  <Label htmlFor="hourlyRate">Hourly Rate (eur) *</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">€</span>
                     <Input
                       id="hourlyRate"
                       type="number"
@@ -337,26 +297,6 @@ export default function FreelancerRegistrationForm(){
                   {errors.experienceLevel && (
                     <p className="text-sm text-destructive">{errors.experienceLevel.message}</p>
                   )}
-                </div>
-
-                {/* Availability */}
-                <div className="space-y-4">
-                  <Label>Availability</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {daysOfWeek.map((day) => (
-                      <div key={day} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={day}
-                          onCheckedChange={(checked) => 
-                            handleAvailabilityChange(day, checked as boolean)
-                          }
-                        />
-                        <Label htmlFor={day} className="text-sm font-normal">
-                          {day}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
 

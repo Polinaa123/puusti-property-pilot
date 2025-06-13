@@ -1,17 +1,15 @@
 
 import React, { useRef, useState } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Slider } from "../components/ui/slider";
+import { Checkbox } from "../components/ui/checkbox";
+import { Textarea } from "../components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Progress } from "../components/ui/progress";
 import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRight } from "lucide-react";
 import { generatePDF } from '../utils/pdfGenerator';
 import SuccessPage from '../components/SuccessPage';
@@ -113,16 +111,20 @@ const Index = () => {
 
   const handleSubmit = async () => {
     try {
-      const res = await fetch('/api/sendSubmission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, propertyType }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+      const pdfDoc = await generatePDF({ ...formData, propertyType: propertyType! });
+      const pdfBlob = await pdfDoc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `puusti_submission_${formData.fullName.replace(/\s+/g,'_')}_${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       setCurrentStep('success');
-    } catch (err) {
-      console.error('error submitting form:', err);
-      alert('Failed to send email; check the console for details.');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Sorry, could not generate PDF.');
     }
   };
 
