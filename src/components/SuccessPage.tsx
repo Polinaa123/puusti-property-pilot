@@ -49,7 +49,7 @@ const SuccessPage: React.FC<SuccessPageProps> = ({ onDownloadPDF, onStartOver })
           variant="outline"
           className="border-[#32ad41] text-[#32ad41] hover:bg-[#32ad41] hover:text-white font-['Kanit'] text-lg px-6 py-3"
         >
-          Submit Another Form
+          Home
         </Button>
       </div>
       
