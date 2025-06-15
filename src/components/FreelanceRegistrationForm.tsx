@@ -9,6 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Separator } from '../components/ui/separator';
 import { FileImage, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { auth, db, storage } from '../utils/firebase'
+import {createUserWithEmailAndPassword} from 'firebase/auth'
+import {doc, setDoc, serverTimestamp} from 'firebase/firestore'
+import {ref, uploadBytes, getDownloadURL} from 'firebase/storage'
 
 interface FreelancerFormData {
   fullName: string;
@@ -36,13 +40,63 @@ export default function FreelancerRegistrationForm(){
   const [uploadedFiles, setUploadedFiles] = useState<FilePreview[]>([]);
 
   const serviceOptions = [
-    'Photography',
-    'Copywriting',
-    'Interior Design',
+    'photography',
+    'copywriting',
+    'interior design',
   ];
 
-  // Initialize React Hook Form
-  const {
+  const onSubmit = async (data: FreelancerFormData) => {
+    setIsSubmitting(true)
+    try {
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
+      )
+      const uid = cred.user.uid
+
+      const fileUrls: string[] = []
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      const file = uploadedFiles[i].file
+      const storageRef = ref(
+        storage,
+        `freelancers/${uid}/samples/${file.name}`
+      )
+      await uploadBytes(storageRef, file)
+      const url = await getDownloadURL(storageRef)
+      fileUrls.push(url)
+    }
+
+    await setDoc(doc(db, 'freelancers', uid), {
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phoneNumber,
+      location: data.location,
+      servicesOffered: data.servicesOffered,
+      hourlyRate: data.hourlyRate,
+      experienceLevel: data.experienceLevel,
+      portfolioUrls: data.portfolioUrls.map(u => u.url),
+      sampleFiles: fileUrls,
+      createdAt: serverTimestamp(),
+    })
+
+    toast({
+      title: "registration successful! thanks!",
+      description: "your freelancer profile has been created successfully",
+    })
+  } catch (error: any) {
+    console.error(error)
+    toast({
+      title: "Registration Failed",
+      description: error.message || "try again later",
+      variant: "destructive",
+    })
+  } finally {
+    setIsSubmitting(false)
+  }
+}
+
+const {
     register,
     handleSubmit,
     control,
@@ -95,56 +149,16 @@ export default function FreelancerRegistrationForm(){
     }
   };
 
-  const onSubmit = async (data: FreelancerFormData) => {
-    setIsSubmitting(true);
-
-    try {
-      const formData = new FormData();
-      
-      Object.entries(data).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, String(value));
-        }
-      });
-
-      uploadedFiles.forEach((filePreview, index) => {
-        formData.append(`sampleFiles_${index}`, filePreview.file);
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      console.log('Form Data:', data);
-      console.log('Uploaded Files:', uploadedFiles);
-      console.log('FormData:', formData);
-
-      toast({
-        title: "Registration Successful!",
-        description: "Your freelancer profile has been created successfully.",
-      });
-
-    } catch (error) {
-      toast({
-        title: "Registration Failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl font-bold text-center">
-              Freelancer Registration
+              freelancer registration
             </CardTitle>
             <p className="text-muted-foreground text-center">
-              Join our platform and start showcasing your skills
+              join our platform and start showcasing your skills
             </p>
           </CardHeader>
           
@@ -153,14 +167,14 @@ export default function FreelancerRegistrationForm(){
               
               {/* Personal Information Section */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">Personal Information</h3>
+                <h3 className="text-xl font-semibold">personal Information</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Label htmlFor="fullName">full name *</Label>
                     <Input
                       id="fullName"
-                      {...register('fullName', { required: 'Full name is required' })}
+                      {...register('fullName', { required: 'full name is required' })}
                       className={errors.fullName ? 'border-destructive' : ''}
                     />
                     {errors.fullName && (
@@ -169,15 +183,15 @@ export default function FreelancerRegistrationForm(){
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
+                    <Label htmlFor="email">email address *</Label>
                     <Input
                       id="email"
                       type="email"
                       {...register('email', {
-                        required: 'Email is required',
+                        required: 'email is required',
                         pattern: {
                           value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: 'Invalid email address',
+                          message: 'invalid email address',
                         },
                       })}
                       className={errors.email ? 'border-destructive' : ''}
@@ -188,11 +202,11 @@ export default function FreelancerRegistrationForm(){
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Label htmlFor="phoneNumber">phone number *</Label>
                     <Input
                       id="phoneNumber"
                       type="tel"
-                      {...register('phoneNumber', { required: 'Phone number is required' })}
+                      {...register('phoneNumber', { required: 'phone number is required' })}
                       className={errors.phoneNumber ? 'border-destructive' : ''}
                     />
                     {errors.phoneNumber && (
@@ -201,11 +215,11 @@ export default function FreelancerRegistrationForm(){
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="location">Location *</Label>
+                    <Label htmlFor="location">location *</Label>
                     <Input
                       id="location"
-                      placeholder="City, Country"
-                      {...register('location', { required: 'Location is required' })}
+                      placeholder="city, country"
+                      {...register('location', { required: 'location is required' })}
                       className={errors.location ? 'border-destructive' : ''}
                     />
                     {errors.location && (
@@ -219,11 +233,11 @@ export default function FreelancerRegistrationForm(){
 
               {/* Professional Information Section */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">Professional Information</h3>
+                <h3 className="text-xl font-semibold">professional Information</h3>
                 
                 {/* Services Offered */}
                 <div className="space-y-4">
-                  <Label>Services Offered * (Select at least one)</Label>
+                  <Label>Services offered * (select at least one)</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {serviceOptions.map((service) => (
                       <div key={service} className="flex items-center space-x-2">
@@ -240,13 +254,13 @@ export default function FreelancerRegistrationForm(){
                     ))}
                   </div>
                   {errors.servicesOffered && (
-                    <p className="text-sm text-destructive">Please select at least one service</p>
+                    <p className="text-sm text-destructive">please select at least one service</p>
                   )}
                 </div>
 
                 {/* Hourly Rate */}
                 <div className="space-y-2">
-                  <Label htmlFor="hourlyRate">Hourly Rate (eur) *</Label>
+                  <Label htmlFor="hourlyRate">hourly rate (eur) *</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">€</span>
                     <Input
@@ -268,7 +282,7 @@ export default function FreelancerRegistrationForm(){
 
                 {/* Experience Level */}
                 <div className="space-y-4">
-                  <Label>Experience Level *</Label>
+                  <Label>experience level *</Label>
                   <Controller
                     name="experienceLevel"
                     control={control}
@@ -281,15 +295,15 @@ export default function FreelancerRegistrationForm(){
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="junior" id="junior" />
-                          <Label htmlFor="junior">Junior</Label>
+                          <Label htmlFor="junior">junior</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="mid-level" id="mid-level" />
-                          <Label htmlFor="mid-level">Mid-level</Label>
+                          <Label htmlFor="mid-level">mid-level</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="senior" id="senior" />
-                          <Label htmlFor="senior">Senior</Label>
+                          <Label htmlFor="senior">senior</Label>
                         </div>
                       </RadioGroup>
                     )}
@@ -304,7 +318,7 @@ export default function FreelancerRegistrationForm(){
 
               {/* Portfolio Section */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">Portfolio & Samples</h3>
+                <h3 className="text-xl font-semibold">portfolio & samples</h3>
                 
                 {/* Portfolio URLs */}
                 <div className="space-y-4">
@@ -334,13 +348,13 @@ export default function FreelancerRegistrationForm(){
                     className="w-full"
                   >
                     <ArrowUp className="h-4 w-4 mr-2" />
-                    Add Another Link
+                    add another link
                   </Button>
                 </div>
 
                 {/* File Upload */}
                 <div className="space-y-4">
-                  <Label htmlFor="sampleFiles">Upload Work Samples</Label>
+                  <Label htmlFor="sampleFiles">upload work samples</Label>
                   <Input
                     id="sampleFiles"
                     type="file"
@@ -350,7 +364,7 @@ export default function FreelancerRegistrationForm(){
                     className="cursor-pointer"
                   />
                   <p className="text-sm text-muted-foreground">
-                    Upload images or PDFs showing your work (max 10MB per file)
+                    upload images or PDFs showing your work (max 10MB per file)
                   </p>
                   
                   {/* File Previews */}
@@ -394,17 +408,17 @@ export default function FreelancerRegistrationForm(){
 
               {/* Security Section */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">Security</h3>
+                <h3 className="text-xl font-semibold">security</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
+                    <Label htmlFor="password">password *</Label>
                     <Input
                       id="password"
                       type="password"
                       {...register('password', {
-                        required: 'Password is required',
-                        minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                        required: 'password is required',
+                        minLength: { value: 8, message: 'password must be at least 8 characters' },
                       })}
                       className={errors.password ? 'border-destructive' : ''}
                     />
@@ -414,14 +428,14 @@ export default function FreelancerRegistrationForm(){
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Label htmlFor="confirmPassword">confirm password *</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
                       {...register('confirmPassword', {
-                        required: 'Please confirm your password',
+                        required: 'please confirm your password',
                         validate: (value) =>
-                          value === password || 'Passwords do not match',
+                          value === password || 'passwords do not match',
                       })}
                       className={errors.confirmPassword ? 'border-destructive' : ''}
                     />
@@ -442,13 +456,13 @@ export default function FreelancerRegistrationForm(){
                     {...register('termsAccepted')}
                   />
                   <Label htmlFor="termsAccepted" className="text-sm">
-                    I agree to the{' '}
+                    i agree to the{' '}
                     <a href="#" className="text-primary underline hover:no-underline">
-                      Terms and Conditions
+                      terms and conditions
                     </a>{' '}
                     and{' '}
                     <a href="#" className="text-primary underline hover:no-underline">
-                      Privacy Policy
+                      privacy policy
                     </a>
                   </Label>
                 </div>
@@ -459,7 +473,7 @@ export default function FreelancerRegistrationForm(){
                   size="lg"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Submitting...' : 'Create Freelancer Profile'}
+                  {isSubmitting ? 'submitting...' : 'create freelancer profile'}
                 </Button>
               </div>
             </form>
