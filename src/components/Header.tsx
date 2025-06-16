@@ -21,29 +21,40 @@ const Header: React.FC<{ onLogoClick?: () => void }> = ({ onLogoClick }) => {
         >
           about
         </Link>
+
         <Link 
           to="/something" 
           className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline"
         >
           something
         </Link>
+
         <Link 
           to="/for-investors" 
           className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline whitespace-nowrap"
         >
           for investors
         </Link>
+
         <Link 
           to="/contact-us" 
           className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline whitespace-nowrap"
         >
           contact us
         </Link>
+
         <Link 
           to="/register" 
           className="text-[#32ad41] no-underline text-lg font-['Kanit'] hover:underline"
         >
-            register
+          for freelancers
+        </Link>
+
+        <Link 
+          to="/account" 
+          className="text-[#32ad41] hover:underline"
+        >
+          account
         </Link>
       </nav>  
     </header>

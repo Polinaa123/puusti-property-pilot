@@ -203,8 +203,8 @@ const Index = () => {
             {currentStep === 'property-type' && (
               <div className="text-center space-y-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-3">what type of property do you have?</h2>
-                  <p className="text-gray-600">choose the option that best describes your property needs</p>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-3">LET YOURSELF IN ;D</h2>
+                  <p className="text-gray-600">what kind of property would you like to puust?</p>
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">

@@ -13,6 +13,8 @@ import { auth, db, storage } from '../utils/firebase'
 import {createUserWithEmailAndPassword} from 'firebase/auth'
 import {doc, setDoc, serverTimestamp} from 'firebase/firestore'
 import {ref, uploadBytes, getDownloadURL} from 'firebase/storage'
+import { useNavigate } from 'react-router-dom';
+import FreelancerSuccess from './FreelancerSuccess';
 
 interface FreelancerFormData {
   fullName: string;
@@ -38,6 +40,8 @@ export default function FreelancerRegistrationForm(){
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FilePreview[]>([]);
+  const navigate = useNavigate();
+  const [isDone, setIsDone] = useState(false);
 
   const serviceOptions = [
     'photography',
@@ -56,6 +60,7 @@ export default function FreelancerRegistrationForm(){
       const uid = cred.user.uid
 
       const fileUrls: string[] = []
+      setIsDone(true);
     for (let i = 0; i < uploadedFiles.length; i++) {
       const file = uploadedFiles[i].file
       const storageRef = ref(
@@ -149,6 +154,10 @@ const {
     }
   };
 
+  if (isDone) {
+    return <FreelancerSuccess />;
+  }
+
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -167,7 +176,7 @@ const {
               
               {/* Personal Information Section */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">personal Information</h3>
+                <h3 className="text-xl font-semibold">personal information</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -237,7 +246,7 @@ const {
                 
                 {/* Services Offered */}
                 <div className="space-y-4">
-                  <Label>Services offered * (select at least one)</Label>
+                  <Label>services offered * (select at least one)</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {serviceOptions.map((service) => (
                       <div key={service} className="flex items-center space-x-2">
