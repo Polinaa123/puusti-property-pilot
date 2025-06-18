@@ -9,7 +9,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Progress } from "../components/ui/progress";
-import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRight } from "lucide-react";
+import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRight, User, Briefcase } from "lucide-react";
 import { generatePDF } from '../utils/pdfGenerator';
 import SuccessPage from '../components/SuccessPage';
 import puustilogo from '../pages/PUUSTILOGO.png';
@@ -18,20 +18,25 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/utils/firebase";
 import { useNavigate } from "react-router-dom";
 
-
-type StepType = 'property-type' | 'personal-info' | 'property-details' | 'improvements' | 'budget' | 'photos' | 'summary';
+type UserType = 'client' | 'freelancer' | null;
+type PropertyType = 'rental' | 'sale' | null;
+type StepType = 'user-type' | 'property-type' | 'personal-info' | 'property-details' | 'improvements' | 'budget' | 'photos' | 'summary';
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<StepType | 'success'>('property-type');
-  const [propertyType, setPropertyType] = useState<'rental' | 'sale' | null>(null);
-  const [role, setRole] = useState<"client"|"freelancer"|null>(null);
+  const [currentStep, setCurrentStep] = useState<StepType | 'success'>('user-type');
+  const [userType, setUserType] = useState<UserType>(null);
+  const [propertyType, setPropertyType] = useState<PropertyType>(null);
   const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
+    // Common fields
     fullName: '',
     email: '',
     phoneNumber: '',
     password: '',
     confirmPassword: '',
+    
+    // Client specific
     location: '',
     budget: [500],
     selectedImprovements: [] as string[],
@@ -45,37 +50,55 @@ const Index = () => {
     propertyCondition: '',
     targetMarket: '',
     salePrice: '',
+    
+    // Freelancer specific
+    experience: '',
+    services: [] as string[],
+    hourlyRate: [50],
+    portfolio: [] as File[],
+    description: ''
   });
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  const steps: StepType[] = ['property-type', 'personal-info', 'property-details', 'improvements', 'budget', 'photos', 'summary'];
+  const clientSteps: StepType[] = ['user-type', 'property-type', 'personal-info', 'property-details', 'improvements', 'budget', 'photos', 'summary'];
+  const freelancerSteps: StepType[] = ['user-type', 'personal-info', 'improvements', 'budget', 'photos', 'summary'];
+  
+  const getCurrentSteps = () => userType === 'client' ? clientSteps : freelancerSteps;
+  const steps = getCurrentSteps();
+  
   const stepTitles: Record<StepType, string> = {
-    'property-type': 'property type',
-    'personal-info': 'personal information',
-    'property-details': 'property details',
-    'improvements': 'services needed',
-    'budget': 'budget',
-    'photos': 'photos',
-    'summary': 'review & submit'
+    'user-type': 'выбор роли',
+    'property-type': 'тип недвижимости',
+    'personal-info': 'личная информация',
+    'property-details': 'детали недвижимости',
+    'improvements': userType === 'client' ? 'выбор услуг' : 'ваши услуги',
+    'budget': userType === 'client' ? 'бюджет' : 'ставка',
+    'photos': userType === 'client' ? 'фото недвижимости' : 'портфолио',
+    'summary': 'проверка и отправка'
   };
 
   const getCurrentStepIndex = () => steps.indexOf(currentStep as StepType);
   const getProgress = () => ((getCurrentStepIndex() + 1) / steps.length) * 100;
 
-  const rentalImprovements = [
-    'professional photography',
-    'interior design consultation',
-    'description and title optimization',
+  const clientServices = [
+    'профессиональная фотосъёмка',
+    'дизайн интерьера',
+    'оптимизация описания и заголовка',
+    'маркетинговая стратегия',
+    'виртуальная постановка'
   ];
 
-  const saleImprovements = [
-    'professional photography',
-    'interior design consultation',
-    'description and title optimization',
+  const freelancerServices = [
+    'фотография',
+    'дизайн интерьера',
+    'копирайтинг',
+    'маркетинг',
+    'виртуальная постановка',
+    'консультации по недвижимости'
   ];
 
-  const improvements = propertyType === 'rental' ? rentalImprovements : saleImprovements;
+  const improvements = userType === 'client' ? clientServices : freelancerServices;
 
   const handleNext = () => {
     const currentIndex = getCurrentStepIndex();
@@ -91,56 +114,67 @@ const Index = () => {
     }
   };
 
-  const handlePropertyTypeSelect = (type: 'rental' | 'sale') => {
+  const handleUserTypeSelect = (type: UserType) => {
+    setUserType(type);
+    if (type === 'client') {
+      setCurrentStep('property-type');
+    } else {
+      setCurrentStep('personal-info');
+    }
+  };
+
+  const handlePropertyTypeSelect = (type: PropertyType) => {
     setPropertyType(type);
     setFormData({ ...formData, selectedImprovements: [] });
     setCurrentStep('personal-info');
   };
 
   const handleImprovementToggle = (improvement: string) => {
+    const field = userType === 'client' ? 'selectedImprovements' : 'services';
     setFormData(prev => ({
       ...prev,
-      selectedImprovements: prev.selectedImprovements.includes(improvement)
-        ? prev.selectedImprovements.filter(item => item !== improvement)
-        : [...prev.selectedImprovements, improvement]
+      [field]: prev[field as keyof typeof prev].includes(improvement)
+        ? (prev[field as keyof typeof prev] as string[]).filter(item => item !== improvement)
+        : [...(prev[field as keyof typeof prev] as string[]), improvement]
     }));
   };
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    const field = userType === 'client' ? 'photos' : 'portfolio';
     console.log('Uploaded files:', files);
-    setFormData(prev => ({ ...prev, photos: [...prev.photos, ...files] }));
+    setFormData(prev => ({ ...prev, [field]: [...prev[field as keyof typeof prev] as File[], ...files] }));
   };
 
   const removePhoto = (index: number) => {
+    const field = userType === 'client' ? 'photos' : 'portfolio';
     setFormData(prev => ({
       ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
+      [field]: (prev[field as keyof typeof prev] as File[]).filter((_, i) => i !== index)
     }));
   };
 
   const handleSubmit = async () => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const uid = cred.user.uid
+      const uid = cred.user.uid;
       setCurrentStep('success');
   
-      // 2) Save basic user doc
+      // Save basic user doc
       await setDoc(doc(db, "users", uid), {
-        role,
+        role: userType,
         email: formData.email,
         createdAt: serverTimestamp()
-      })
+      });
   
-      // 3) Save the detailed form under customers or freelancers
-      if (role === "client") {
+      // Save detailed form data
+      if (userType === "client") {
         await setDoc(doc(db, "customers", uid), {
           fullName: formData.fullName,
-          phoneNumber:    formData.phoneNumber,
+          phoneNumber: formData.phoneNumber,
           location: formData.location,
           email: formData.email,
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
+          propertyType: propertyType,
           budget: formData.budget[0],
           selectedImprovements: formData.selectedImprovements,
           photos: formData.photos.map(photo => ({
@@ -153,45 +187,48 @@ const Index = () => {
           listingTitle: formData.listingTitle,
           listingDescription: formData.listingDescription,
           roomCount: formData.roomCount,
-          propertySize:   formData.propertySize,
+          propertySize: formData.propertySize,
           yearBuilt: formData.yearBuilt,
           propertyCondition: formData.propertyCondition,
           targetMarket: formData.targetMarket,
           salePrice: formData.salePrice,
           submittedAt: serverTimestamp()
-        })
-        navigate("/account/customer/")
+        });
+        navigate("/account/customer");
       } else {
         await setDoc(doc(db, "freelancers", uid), {
           fullName: formData.fullName,
           email: formData.email,
           phoneNumber: formData.phoneNumber,
-          location: formData.location,
-          servicesOffered: formData.selectedImprovements,
-          hourlyRate: formData.budget[0],
-          experienceLevel: formData.roomCount,
-          portfolioUrls: formData.photos.map(photo => ({
+          experience: formData.experience,
+          services: formData.services,
+          hourlyRate: formData.hourlyRate[0],
+          portfolio: formData.portfolio.map(photo => ({
             name: photo.name,
             size: photo.size,
             type: photo.type,
             url: URL.createObjectURL(photo)
           })),
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-          termsAccepted: true,
+          description: formData.description,
           submittedAt: serverTimestamp()
         });
-        navigate("/account/freelancer")
+        navigate("/account/freelancer");
       }
     } catch (e: any) {
-      console.error(e)
-      alert(`mistake: ${e.message}`)
+      console.error(e);
+      alert(`Ошибка: ${e.message}`);
     }
-  }
+  };
 
   const handleDownloadPDF = async () => {
+    if (userType !== 'client') return;
+    
     try {
-      const pdfDoc = await generatePDF({ ...formData, propertyType: propertyType! });
+      const pdfDoc = await generatePDF({ 
+        ...formData, 
+        propertyType: propertyType!,
+        selectedImprovements: formData.selectedImprovements
+      });
       const pdfBlob = pdfDoc.output('blob');
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
@@ -207,7 +244,8 @@ const Index = () => {
   };
 
   const handleStartOver = () => {
-    setCurrentStep('property-type');
+    setCurrentStep('user-type');
+    setUserType(null);
     setPropertyType(null);
     setFormData({
       fullName: '',
@@ -216,7 +254,7 @@ const Index = () => {
       password: '',
       confirmPassword: '',
       location: '',
-      budget: [1000],
+      budget: [500],
       selectedImprovements: [],
       photos: [],
       listingLink: '',
@@ -227,7 +265,12 @@ const Index = () => {
       yearBuilt: '',
       propertyCondition: '',
       targetMarket: '',
-      salePrice: ''
+      salePrice: '',
+      experience: '',
+      services: [],
+      hourlyRate: [50],
+      portfolio: [],
+      description: ''
     });
   };
 
@@ -257,50 +300,46 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <p className="text-sm text-[#32ad41]">{stepTitles[currentStep as StepType]}</p>
             <Badge variant="secondary" className="text-[#32ad41]">
-              Step {getCurrentStepIndex() + 1} of {steps.length}
+              Шаг {getCurrentStepIndex() + 1} из {steps.length}
             </Badge>
           </div>
         </div>
+
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-8">
-            {currentStep === 'property-type' && (
+            {/* User Type Selection */}
+            {currentStep === 'user-type' && (
               <div className="text-center space-y-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-3">LET YOURSELF IN ;D</h2>
-                  <p className="text-gray-600">what kind of property would you like to puust?</p>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-3">Добро пожаловать в Puusti!</h2>
+                  <p className="text-gray-600">Выберите свою роль на платформе</p>
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                   <Card 
                     className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
-                    onClick={() => {
-                      setRole("client")
-                      handlePropertyTypeSelect('rental')
-                    }}
+                    onClick={() => handleUserTypeSelect('client')}
                   >
                     <CardContent className="p-6 text-center">
                       <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
-                        <Building2 className="w-8 h-8 text-[#32ad41]" />
+                        <Home className="w-8 h-8 text-[#32ad41]" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-700 mb-2">short-term rental</h3>
-                      <p className="text-gray-600 text-sm">optimize your rental property</p>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">Собственник недвижимости</h3>
+                      <p className="text-gray-600 text-sm">Хочу оптимизировать свои объявления и получить услуги</p>
                       <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#32ad41] transition-colors" />
                     </CardContent>
                   </Card>
 
                   <Card 
                     className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
-                    onClick={() => {
-                      setRole("client")
-                      handlePropertyTypeSelect('sale')
-                    }}
+                    onClick={() => handleUserTypeSelect('freelancer')}
                   >
                     <CardContent className="p-6 text-center">
                       <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
-                        <Home className="w-8 h-8 text-[#32ad41]" />
+                        <Briefcase className="w-8 h-8 text-[#32ad41]" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-700 mb-2">property for sale</h3>
-                      <p className="text-gray-600 text-sm">prepare your property for the real estate market</p>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">Фрилансер</h3>
+                      <p className="text-gray-600 text-sm">Предлагаю услуги по фотографии, дизайну и маркетингу</p>
                       <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#32ad41] transition-colors" />
                     </CardContent>
                   </Card>
@@ -308,19 +347,62 @@ const Index = () => {
               </div>
             )}
 
+            {/* Property Type Selection (only for clients) */}
+            {currentStep === 'property-type' && userType === 'client' && (
+              <div className="text-center space-y-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-3">Тип недвижимости</h2>
+                  <p className="text-gray-600">Какую недвижимость хотите оптимизировать?</p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                  <Card 
+                    className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
+                    onClick={() => handlePropertyTypeSelect('rental')}
+                  >
+                    <CardContent className="p-6 text-center">
+                      <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
+                        <Building2 className="w-8 h-8 text-[#32ad41]" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">Краткосрочная аренда</h3>
+                      <p className="text-gray-600 text-sm">Оптимизация объявления для Airbnb, Booking и т.д.</p>
+                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#32ad41] transition-colors" />
+                    </CardContent>
+                  </Card>
+
+                  <Card 
+                    className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
+                    onClick={() => handlePropertyTypeSelect('sale')}
+                  >
+                    <CardContent className="p-6 text-center">
+                      <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
+                        <Home className="w-8 h-8 text-[#32ad41]" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">Продажа недвижимости</h3>
+                      <p className="text-gray-600 text-sm">Подготовка недвижимости к продаже</p>
+                      <ChevronRight className="w-5 h-5 text-gray-400 mx-auto mt-4 group-hover:text-[#32ad41] transition-colors" />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Personal Info */}
             {currentStep === 'personal-info' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-2">personal information</h2>
-                  <p className="text-gray-600">tell us a bit about yourself</p>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-2">Личная информация</h2>
+                  <p className="text-gray-600">
+                    {userType === 'client' ? 'Расскажите о себе' : 'Создайте свой профиль фрилансера'}
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">full name *</Label>
+                    <Label htmlFor="fullName">Полное имя *</Label>
                     <Input
                       id="fullName"
-                      placeholder="enter your full name"
+                      placeholder="Введите ваше полное имя"
                       value={formData.fullName}
                       onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                       className="h-12"
@@ -328,11 +410,11 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">email address *</Label>
+                    <Label htmlFor="email">Email адрес *</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="enter your email"
+                      placeholder="Введите ваш email"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       className="h-12"
@@ -340,11 +422,11 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">phone number *</Label>
+                    <Label htmlFor="phoneNumber">Номер телефона *</Label>
                     <Input
                       id="phoneNumber"
                       type="tel"
-                      placeholder="enter your phone number"
+                      placeholder="Введите ваш номер телефона"
                       value={formData.phoneNumber}
                       onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                       className="h-12"
@@ -352,10 +434,10 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password">password *</Label>
+                    <Label htmlFor="password">Пароль *</Label>
                     <Input
                       id="password"
-                      placeholder="password"
+                      placeholder="Создайте пароль"
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
@@ -364,17 +446,60 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">confirm password *</Label>
+                    <Label htmlFor="confirmPassword">Подтвердите пароль *</Label>
                     <Input
                       id="confirmPassword"
-                      placeholder="confirm your password"
+                      placeholder="Подтвердите пароль"
                       type="password"
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                       className="h-12"
                     />
                   </div>
+
+                  {userType === 'freelancer' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="experience">Опыт работы</Label>
+                      <Select value={formData.experience} onValueChange={(value) => setFormData({...formData, experience: value})}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Выберите ваш опыт" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Начинающий (менее 1 года)</SelectItem>
+                          <SelectItem value="intermediate">Средний (1-3 года)</SelectItem>
+                          <SelectItem value="advanced">Продвинутый (3-5 лет)</SelectItem>
+                          <SelectItem value="expert">Эксперт (более 5 лет)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {userType === 'client' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Местоположение недвижимости *</Label>
+                      <Input
+                        id="location"
+                        placeholder="Город, страна"
+                        value={formData.location}
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        className="h-12"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                {userType === 'freelancer' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="description">О себе</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Расскажите о своем опыте и специализации"
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      className="min-h-[120px]"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -495,97 +620,117 @@ const Index = () => {
               </div>
             )}
 
+            {/* Services/Improvements */}
             {currentStep === 'improvements' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-2">services needed</h2>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-2">
+                    {userType === 'client' ? 'Необходимые услуги' : 'Ваши услуги'}
+                  </h2>
                   <p className="text-gray-600">
-                    {propertyType === 'rental' 
-                      ? 'select the services you need for your rental property' 
-                      : 'select the services you need to prepare your property for sale'}
+                    {userType === 'client' 
+                      ? 'Выберите услуги, которые вам нужны' 
+                      : 'Отметьте услуги, которые вы предоставляете'}
                   </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
-                  {improvements.map((improvement) => (
-                    <Card 
-                      key={improvement}
-                      className={`cursor-pointer transition-all duration-200 border-2 ${
-                        formData.selectedImprovements.includes(improvement)
-                          ? 'border-[#32ad41] bg-[#32ad41]/5'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => handleImprovementToggle(improvement)}
-                    >
-                      <CardContent className="p-4 flex items-center space-x-3">
-                        <Checkbox
-                          checked={formData.selectedImprovements.includes(improvement)}
-                          className="data-[state=checked]:bg-[#49CA38] data-[state=checked]:border-[#32ad41]"
-                        />
-                        <span className="font-medium text-gray-900">{improvement}</span>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {improvements.map((improvement) => {
+                    const isSelected = userType === 'client' 
+                      ? formData.selectedImprovements.includes(improvement)
+                      : formData.services.includes(improvement);
+                      
+                    return (
+                      <Card 
+                        key={improvement}
+                        className={`cursor-pointer transition-all duration-200 border-2 ${
+                          isSelected
+                            ? 'border-[#32ad41] bg-[#32ad41]/5'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => handleImprovementToggle(improvement)}
+                      >
+                        <CardContent className="p-4 flex items-center space-x-3">
+                          <Checkbox
+                            checked={isSelected}
+                            className="data-[state=checked]:bg-[#49CA38] data-[state=checked]:border-[#32ad41]"
+                          />
+                          <span className="font-medium text-gray-900">{improvement}</span>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
+            {/* Budget/Rate */}
             {currentStep === 'budget' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-2">budget</h2>
-                  <p className="text-gray-600">what's your budget for this project?</p>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-2">
+                    {userType === 'client' ? 'Бюджет' : 'Почасовая ставка'}
+                  </h2>
+                  <p className="text-gray-600">
+                    {userType === 'client' 
+                      ? 'Какой у вас бюджет на этот проект?' 
+                      : 'Укажите вашу почасовую ставку'}
+                  </p>
                 </div>
 
                 <div className="space-y-8">
                   <div className="bg-gray-50 rounded-xl p-6">
                     <div className="text-center mb-6">
-                      <div className="text-4xl font-bold text-[#32ad41] mb-2">€{formData.budget[0].toLocaleString()}</div>
-                      <p className="text-gray-600">your selected budget</p>
+                      <div className="text-4xl font-bold text-[#32ad41] mb-2">
+                        €{userType === 'client' ? formData.budget[0].toLocaleString() : formData.hourlyRate[0].toLocaleString()}
+                        {userType === 'freelancer' && <span className="text-lg">/час</span>}
+                      </div>
+                      <p className="text-gray-600">
+                        {userType === 'client' ? 'ваш бюджет' : 'ваша ставка'}
+                      </p>
                     </div>
                     <Slider
-                      value={formData.budget}
-                      onValueChange={(value) => setFormData({...formData, budget: value})}
-                      max={1000}
-                      min={0}
-                      step={50}
+                      value={userType === 'client' ? formData.budget : formData.hourlyRate}
+                      onValueChange={(value) => setFormData({
+                        ...formData, 
+                        [userType === 'client' ? 'budget' : 'hourlyRate']: value
+                      })}
+                      max={userType === 'client' ? 2000 : 200}
+                      min={userType === 'client' ? 100 : 10}
+                      step={userType === 'client' ? 50 : 5}
                       className="w-full"
                     />
                     <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>€0</span>
-                      <span>€1000+</span>
+                      <span>€{userType === 'client' ? '100' : '10'}</span>
+                      <span>€{userType === 'client' ? '2000+' : '200+'}</span>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Photos/Portfolio */}
             {currentStep === 'photos' && (
               <div className="space-y-6">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-700 mb-2">property photos</h2>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-2">
+                    {userType === 'client' ? 'Фото недвижимости' : 'Портфолио'}
+                  </h2>
                   <p className="text-gray-600">
-                    upload photos of your property (optional but recommended)
+                    {userType === 'client' 
+                      ? 'Загрузите фото вашей недвижимости (необязательно, но рекомендуется)'
+                      : 'Покажите примеры ваших работ'}
                   </p>
                 </div>
 
-                {/* wrap in a flex container to center the box */}
                 <div className="flex justify-center">
                   <label
                     htmlFor="photo-upload"
-                    className="
-                      relative 
-                      border-2 border-dashed border-gray-300 
-                      rounded-xl p-12 
-                      text-center 
-                      hover:border-[#32ad41] transition-colors 
-                      cursor-pointer 
-                      w-full max-w-xs   /* shrink the box to a more 'square' look */
-                    "
+                    className="relative border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-[#32ad41] transition-colors cursor-pointer w-full max-w-xs"
                   >
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 mb-4">
-                      drag and drop photos here, or click to browse
+                      Перетащите фото сюда или нажмите для выбора
                     </p>
                     <input
                       type="file"
@@ -598,10 +743,10 @@ const Index = () => {
                   </label>
                 </div>
 
-                {/* only show previews if there are any */}
-                {formData.photos.length > 0 && (
+                {((userType === 'client' && formData.photos.length > 0) || 
+                  (userType === 'freelancer' && formData.portfolio.length > 0)) && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {formData.photos.map((photo, i) => (
+                    {(userType === 'client' ? formData.photos : formData.portfolio).map((photo, i) => (
                       <div key={i} className="relative group">
                         <img
                           src={URL.createObjectURL(photo)}
@@ -623,46 +768,61 @@ const Index = () => {
               </div>
             )}
 
-            {/* Summary Step */}
+            {/* Summary */}
             {currentStep === 'summary' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-2">review your submission</h2>
-                  <p className="text-gray-600">please review all information before submitting</p>
+                  <h2 className="text-2xl font-bold text-gray-700 mb-2">Проверьте данные</h2>
+                  <p className="text-gray-600">Пожалуйста, проверьте всю информацию перед отправкой</p>
                 </div>
 
                 <div className="grid gap-6">
                   <Card className="bg-gray-50">
                     <CardHeader>
-                      <CardTitle className="text-lg text-gray-700">property type</CardTitle>
+                      <CardTitle className="text-lg text-gray-700">Роль</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <Badge variant="secondary" className="bg-[#32ad41] text-white">
-                        {propertyType === 'rental' ? 'short-term rental' : 'property for sale'}
+                        {userType === 'client' ? 'Собственник недвижимости' : 'Фрилансер'}
                       </Badge>
                     </CardContent>
                   </Card>
 
+                  {userType === 'client' && propertyType && (
+                    <Card className="bg-gray-50">
+                      <CardHeader>
+                        <CardTitle className="text-lg text-gray-700">Тип недвижимости</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="secondary" className="bg-[#32ad41] text-white">
+                          {propertyType === 'rental' ? 'Краткосрочная аренда' : 'Продажа недвижимости'}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card className="bg-gray-50">
                     <CardHeader>
-                      <CardTitle className="text-lg text-gray-700">contact information</CardTitle>
+                      <CardTitle className="text-lg text-gray-700">Контактная информация</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-gray-700">
-                      <p><strong>name:</strong> {formData.fullName}</p>
-                      <p><strong>email:</strong> {formData.email}</p>
-                      <p><strong>phone:</strong> {formData.phoneNumber}</p>
-                      <p><strong>location:</strong> {formData.location}</p>
+                      <p><strong>Имя:</strong> {formData.fullName}</p>
+                      <p><strong>Email:</strong> {formData.email}</p>
+                      <p><strong>Телефон:</strong> {formData.phoneNumber}</p>
+                      {userType === 'client' && <p><strong>Местоположение:</strong> {formData.location}</p>}
                     </CardContent>
                   </Card>
 
                   <Card className="bg-gray-50">
                     <CardHeader>
-                      <CardTitle className="text-lg text-gray-700">selected services</CardTitle>
+                      <CardTitle className="text-lg text-gray-700">
+                        {userType === 'client' ? 'Выбранные услуги' : 'Предоставляемые услуги'}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2 text-gray-700">
-                        {formData.selectedImprovements.map((improvement) => (
-                          <Badge key={improvement} variant="outline">{improvement}</Badge>
+                        {(userType === 'client' ? formData.selectedImprovements : formData.services).map((item) => (
+                          <Badge key={item} variant="outline">{item}</Badge>
                         ))}
                       </div>
                     </CardContent>
@@ -670,37 +830,17 @@ const Index = () => {
 
                   <Card className="bg-gray-50">
                     <CardHeader>
-                      <CardTitle className="text-lg text-gray-700">budget</CardTitle>
+                      <CardTitle className="text-lg text-gray-700">
+                        {userType === 'client' ? 'Бюджет' : 'Почасовая ставка'}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-[#32ad41]">€{formData.budget[0].toLocaleString()}</div>
+                      <div className="text-2xl font-bold text-[#32ad41]">
+                        €{userType === 'client' ? formData.budget[0].toLocaleString() : formData.hourlyRate[0].toLocaleString()}
+                        {userType === 'freelancer' && <span className="text-lg">/час</span>}
+                      </div>
                     </CardContent>
                   </Card>
-
-                  {formData.photos.length > 0 && (
-                    <Card className="bg-gray-50">
-                      <CardHeader>
-                        <CardTitle className="text-lg">uploaded photos</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-4 gap-2">
-                          {formData.photos.slice(0, 4).map((photo, index) => (
-                            <img
-                              key={index}
-                              src={URL.createObjectURL(photo)}
-                              alt={`property photo ${index + 1}`}
-                              className="w-full h-16 object-cover rounded border"
-                            />
-                          ))}
-                          {formData.photos.length > 4 && (
-                            <div className="w-full h-16 bg-gray-200 rounded border flex items-center justify-center text-sm text-gray-600">
-                              +{formData.photos.length - 4} more
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
                 </div>
               </div>
             )}
@@ -715,7 +855,7 @@ const Index = () => {
                   className="flex items-center gap-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  previous
+                  Назад
                 </Button>
               ) : (
                 <div />
@@ -728,7 +868,7 @@ const Index = () => {
                   disabled={!formData.fullName || !formData.email || !formData.phoneNumber || formData.password.length < 8 || formData.password !== formData.confirmPassword}
                 >
                   <CheckCircle className="w-4 h-4" />
-                  confirm & send
+                  Подтвердить и отправить
                 </Button>
               ) : (
                 <Button
@@ -736,10 +876,10 @@ const Index = () => {
                   className="bg-[#32ad41] hover:bg-[#3ab42f] text-white flex items-center gap-2"
                   disabled={
                     (currentStep === 'personal-info' && (!formData.fullName || !formData.email || !formData.phoneNumber || formData.password.length < 8 || formData.password !== formData.confirmPassword)) ||
-                    (currentStep === 'improvements' && formData.selectedImprovements.length === 0)
+                    (currentStep === 'improvements' && (userType === 'client' ? formData.selectedImprovements.length === 0 : formData.services.length === 0))
                   }
                 >
-                  Next
+                  Далее
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               )}
@@ -752,4 +892,3 @@ const Index = () => {
 };
 
 export default Index;
-
