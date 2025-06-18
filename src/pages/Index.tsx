@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,14 +13,25 @@ import { Building2, Home, Upload, CheckCircle, ArrowRight, ArrowLeft, ChevronRig
 import { generatePDF } from '../utils/pdfGenerator';
 import SuccessPage from '../components/SuccessPage';
 import puustilogo from '../pages/PUUSTILOGO.png';
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/utils/firebase";
+import { useNavigate } from "react-router-dom";
+
+
+type StepType = 'property-type' | 'personal-info' | 'property-details' | 'improvements' | 'budget' | 'photos' | 'summary';
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<keyof typeof stepTitles | 'success'>('property-type');
+  const [currentStep, setCurrentStep] = useState<StepType | 'success'>('property-type');
   const [propertyType, setPropertyType] = useState<'rental' | 'sale' | null>(null);
+  const [role, setRole] = useState<"client"|"freelancer"|null>(null);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phoneNumber: '',
+    password: '',
+    confirmPassword: '',
     location: '',
     budget: [500],
     selectedImprovements: [] as string[],
@@ -34,13 +44,13 @@ const Index = () => {
     yearBuilt: '',
     propertyCondition: '',
     targetMarket: '',
-    salePrice: ''
+    salePrice: '',
   });
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  const steps = ['property-type', 'personal-info', 'property-details', 'improvements', 'budget', 'photos', 'summary'];
-  const stepTitles = {
+  const steps: StepType[] = ['property-type', 'personal-info', 'property-details', 'improvements', 'budget', 'photos', 'summary'];
+  const stepTitles: Record<StepType, string> = {
     'property-type': 'property type',
     'personal-info': 'personal information',
     'property-details': 'property details',
@@ -50,7 +60,7 @@ const Index = () => {
     'summary': 'review & submit'
   };
 
-  const getCurrentStepIndex = () => steps.indexOf(currentStep);
+  const getCurrentStepIndex = () => steps.indexOf(currentStep as StepType);
   const getProgress = () => ((getCurrentStepIndex() + 1) / steps.length) * 100;
 
   const rentalImprovements = [
@@ -70,14 +80,14 @@ const Index = () => {
   const handleNext = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1] as keyof typeof stepTitles);
+      setCurrentStep(steps[currentIndex + 1]);
     }
   };
 
   const handlePrev = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1] as keyof typeof stepTitles);
+      setCurrentStep(steps[currentIndex - 1]);
     }
   };
 
@@ -111,22 +121,73 @@ const Index = () => {
 
   const handleSubmit = async () => {
     try {
-      const pdfDoc = await generatePDF({ ...formData, propertyType: propertyType! });
-      const pdfBlob = await pdfDoc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `puusti_submission_${formData.fullName.replace(/\s+/g,'_')}_${Date.now()}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const uid = cred.user.uid
       setCurrentStep('success');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Sorry, could not generate PDF.');
+  
+      // 2) Save basic user doc
+      await setDoc(doc(db, "users", uid), {
+        role,
+        email: formData.email,
+        createdAt: serverTimestamp()
+      })
+  
+      // 3) Save the detailed form under customers or freelancers
+      if (role === "client") {
+        await setDoc(doc(db, "customers", uid), {
+          fullName: formData.fullName,
+          phoneNumber:    formData.phoneNumber,
+          location: formData.location,
+          email: formData.email,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          budget: formData.budget[0],
+          selectedImprovements: formData.selectedImprovements,
+          photos: formData.photos.map(photo => ({
+            name: photo.name,
+            size: photo.size,
+            type: photo.type,
+            url: URL.createObjectURL(photo)
+          })),
+          listingLink: formData.listingLink,
+          listingTitle: formData.listingTitle,
+          listingDescription: formData.listingDescription,
+          roomCount: formData.roomCount,
+          propertySize:   formData.propertySize,
+          yearBuilt: formData.yearBuilt,
+          propertyCondition: formData.propertyCondition,
+          targetMarket: formData.targetMarket,
+          salePrice: formData.salePrice,
+          submittedAt: serverTimestamp()
+        })
+        navigate("/account/customer/")
+      } else {
+        await setDoc(doc(db, "freelancers", uid), {
+          fullName: formData.fullName,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          location: formData.location,
+          servicesOffered: formData.selectedImprovements,
+          hourlyRate: formData.budget[0],
+          experienceLevel: formData.roomCount,
+          portfolioUrls: formData.photos.map(photo => ({
+            name: photo.name,
+            size: photo.size,
+            type: photo.type,
+            url: URL.createObjectURL(photo)
+          })),
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          termsAccepted: true,
+          submittedAt: serverTimestamp()
+        });
+        navigate("/account/freelancer")
+      }
+    } catch (e: any) {
+      console.error(e)
+      alert(`mistake: ${e.message}`)
     }
-  };
+  }
 
   const handleDownloadPDF = async () => {
     try {
@@ -152,6 +213,8 @@ const Index = () => {
       fullName: '',
       email: '',
       phoneNumber: '',
+      password: '',
+      confirmPassword: '',
       location: '',
       budget: [1000],
       selectedImprovements: [],
@@ -189,10 +252,10 @@ const Index = () => {
               alt="puusti logo" 
               className="h-12" 
             />
-            </div>
+          </div>
           <Progress value={getProgress()} className="mb-4"/>
           <div className="flex items-center justify-between">
-            <p className="text-sm text-[#32ad41]">{stepTitles[currentStep]}</p>
+            <p className="text-sm text-[#32ad41]">{stepTitles[currentStep as StepType]}</p>
             <Badge variant="secondary" className="text-[#32ad41]">
               Step {getCurrentStepIndex() + 1} of {steps.length}
             </Badge>
@@ -210,7 +273,10 @@ const Index = () => {
                 <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                   <Card 
                     className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
-                    onClick={() => handlePropertyTypeSelect('rental')}
+                    onClick={() => {
+                      setRole("client")
+                      handlePropertyTypeSelect('rental')
+                    }}
                   >
                     <CardContent className="p-6 text-center">
                       <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
@@ -224,7 +290,10 @@ const Index = () => {
 
                   <Card 
                     className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-[#49CA38] group"
-                    onClick={() => handlePropertyTypeSelect('sale')}
+                    onClick={() => {
+                      setRole("client")
+                      handlePropertyTypeSelect('sale')
+                    }}
                   >
                     <CardContent className="p-6 text-center">
                       <div className="bg-[#32ad41]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#49CA38]/20 transition-colors">
@@ -283,12 +352,25 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="location">property location *</Label>
+                    <Label htmlFor="password">password *</Label>
                     <Input
-                      id="location"
-                      placeholder="city, country"
-                      value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                      id="password"
+                      placeholder="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">confirm password *</Label>
+                    <Input
+                      id="confirmPassword"
+                      placeholder="confirm your password"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                       className="h-12"
                     />
                   </div>
@@ -303,6 +385,17 @@ const Index = () => {
                   <p className="text-gray-600">
                     {propertyType === 'rental' ? 'tell us about your rental property' : 'tell us about your property for sale'}
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">property location *</Label>
+                  <Input
+                    id="location"
+                    placeholder="city, country"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    className="h-12"
+                  />
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -323,7 +416,7 @@ const Index = () => {
                         <Label htmlFor="roomCount">number of rooms</Label>
                         <Select value={formData.roomCount} onValueChange={(value) => setFormData({...formData, roomCount: value})}>
                           <SelectTrigger className="h-12">
-                            <SelectValue placeholder="Select room count" />
+                            <SelectValue placeholder="select room count" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="0">studio</SelectItem>
@@ -364,7 +457,7 @@ const Index = () => {
                         <Label htmlFor="yearBuilt">year built</Label>
                         <Input
                           id="yearBuilt"
-                          placeholder="e.g., 2010"
+                          placeholder="e.g., 1995"
                           value={formData.yearBuilt}
                           onChange={(e) => setFormData({...formData, yearBuilt: e.target.value})}
                           className="h-12"
@@ -487,7 +580,7 @@ const Index = () => {
                       text-center 
                       hover:border-[#32ad41] transition-colors 
                       cursor-pointer 
-                      w-full max-w-xs   /* shrink the box to a more “square” look */
+                      w-full max-w-xs   /* shrink the box to a more 'square' look */
                     "
                   >
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -505,33 +598,32 @@ const Index = () => {
                   </label>
                 </div>
 
-    {/* only show previews if there are any */}
-    {formData.photos.length > 0 && (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {formData.photos.map((photo, i) => (
-          <div key={i} className="relative group">
-            <img
-              src={URL.createObjectURL(photo)}
-              alt={`photo-${i}`}
-              className="w-full h-24 object-cover rounded-lg border"
-            />
-            <Button
-              variant="destructive"
-              size="sm"
-              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 p-0"
-              onClick={() => removePhoto(i)}
-            >
-              ×
-            </Button>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-)}
+                {/* only show previews if there are any */}
+                {formData.photos.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {formData.photos.map((photo, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={URL.createObjectURL(photo)}
+                          alt={`photo-${i}`}
+                          className="w-full h-24 object-cover rounded-lg border"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 p-0"
+                          onClick={() => removePhoto(i)}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Summary Step */}
-
             {currentStep === 'summary' && (
               <div className="space-y-6">
                 <div>
@@ -633,7 +725,7 @@ const Index = () => {
                 <Button
                   onClick={handleSubmit}
                   className="bg-[#32ad41] hover:bg-[#3ab42f] text-white flex items-center gap-2"
-                  disabled={!formData.fullName || !formData.email || !formData.phoneNumber || !formData.location}
+                  disabled={!formData.fullName || !formData.email || !formData.phoneNumber || formData.password.length < 8 || formData.password !== formData.confirmPassword}
                 >
                   <CheckCircle className="w-4 h-4" />
                   confirm & send
@@ -643,7 +735,7 @@ const Index = () => {
                   onClick={handleNext}
                   className="bg-[#32ad41] hover:bg-[#3ab42f] text-white flex items-center gap-2"
                   disabled={
-                    (currentStep === 'personal-info' && (!formData.fullName || !formData.email || !formData.phoneNumber || !formData.location)) ||
+                    (currentStep === 'personal-info' && (!formData.fullName || !formData.email || !formData.phoneNumber || formData.password.length < 8 || formData.password !== formData.confirmPassword)) ||
                     (currentStep === 'improvements' && formData.selectedImprovements.length === 0)
                   }
                 >
@@ -660,3 +752,4 @@ const Index = () => {
 };
 
 export default Index;
+

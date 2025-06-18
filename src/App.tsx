@@ -11,6 +11,8 @@ import FreelancerRegistrationForm from './components/FreelanceRegistrationForm';
 import AccountRouter from "./pages/AccountRouter";
 import FreelancerAccount from "./pages/FreelancerAccount";
 import CustomerAccount from "./pages/CustomerAccount";
+import CustomerLogin from "./pages/CustomerLogin";
+import FreelancerLogin from "./pages/FreelancerLogin";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +62,8 @@ const App = () => (
             />
             <Route path="/register" element={<FreelancerRegistrationForm />} />
             <Route path="/account" element={<AccountRouter />} />
+            <Route path="/account/customer-login" element={<CustomerLogin />} />
+            <Route path="/account/freelancer-login" element={<FreelancerLogin />} />
             <Route path="/account/freelancer" element={<FreelancerAccount />} />
             <Route path="/account/customer" element={<CustomerAccount />} />
             <Route path="*" element={<NotFound />} />

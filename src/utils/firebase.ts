@@ -13,13 +13,17 @@ const firebaseConfig = {
   measurementId: "G-HM73V50956"
 };
 
-const app       = initializeApp(firebaseConfig);
-export const auth = getAuth(app)
-export const db = getFirestore(app)
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+if (window.location.hostname !== "your-production.com") {
+  connectAuthEmulator(auth, "http://localhost:9198");
+}
+export const db = getFirestore(app);
+if (window.location.hostname !== "your-production.com") {
+  connectFirestoreEmulator(db, "localhost", 8080);
+}
 export const storage = getStorage(app)
 
-if (window.location.hostname === "localhost") {
-  connectStorageEmulator(storage, "localhost", 9199);
-  connectAuthEmulator(auth, "http://localhost:9198");
-  connectFirestoreEmulator(db, "localhost", 8082);
+if (import.meta.env.DEV) {
+  connectAuthEmulator(auth, "http://127.0.0.1:9198");
 }

@@ -50,7 +50,7 @@ const Header: React.FC<{ onLogoClick?: () => void }> = ({ onLogoClick }) => {
           for freelancers
         </Link>
 
-        <Link 
+        <Link
           to="/account" 
           className="text-[#32ad41] hover:underline"
         >

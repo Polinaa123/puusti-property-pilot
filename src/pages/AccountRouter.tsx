@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 
 export default function AccountRouter() {
   return (
@@ -11,7 +11,7 @@ export default function AccountRouter() {
             <CardTitle>freelancer account</CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Link to="/account/freelancer">
+            <Link to="/account/freelancer-login">
               <Button>go to freelancer</Button>
             </Link>
           </CardContent>
@@ -22,7 +22,7 @@ export default function AccountRouter() {
             <CardTitle>customer account</CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Link to="/account/customer">
+            <Link to="/account/customer-login">
               <Button>go to customer</Button>
             </Link>
           </CardContent>

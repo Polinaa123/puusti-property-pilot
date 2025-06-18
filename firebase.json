@@ -4,24 +4,14 @@
   },
   "emulators": {
     "auth": {
-      "host": "localhost",
+      "host": "0.0.0.0",
       "port": 9198
     },
-    "firestore": {
-      "host": "localhost",
-      "port": 8082
-    },
-    "storage": {
-      "host": "localhost",
-      "port": 9199
-    },
-    "ui": {
-      "enabled": true,
-      "host": "localhost",
-      "port": 4001
-    },
-    "singleProjectMode": true
+    "firestore": { "host": "0.0.0.0", "port": 8082},
+    "storage":   { "host": "0.0.0.0", "port": 9199 },
+    "ui":        { "host": "0.0.0.0", "port": 4002 }
   },
+  "singleProjectMode": true,
   "functions": [
     {
       "source": "functions",
@@ -30,7 +20,6 @@
         "node_modules",
         ".git",
         "firebase-debug.log",
-        "firebase-debug.*.log",
         "*.local"
       ],
       "predeploy": [
